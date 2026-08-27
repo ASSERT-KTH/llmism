@@ -2,7 +2,7 @@
 
 Detector and remediator for *LLMisms* — idioms and tics overused by language
 models that make prose sound machine-generated: `delve`, "it's not X, it's Y",
-em-dash overuse, bolded bullet lead-ins, uniform sentence rhythm, and friends.
+em-dash overuse, bolded bullet lead-ins, etc.
 
 ## Install (local prototype)
 
