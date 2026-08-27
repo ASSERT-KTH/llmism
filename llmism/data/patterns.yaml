@@ -126,6 +126,10 @@
   category: phrasal
   pattern: '\bmore than just\b'
   suggestion: null
+- id: rather-than
+  category: phrasal
+  pattern: '\brather than\b'
+  suggestion: null
 - id: whether-x-or-y-depends
   category: phrasal
   pattern: '\bwhether [^.;:!?]{1,60} (?:or not )?depends\b'

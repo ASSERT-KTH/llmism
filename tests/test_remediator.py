@@ -55,6 +55,12 @@ class TestDeterministic:
         assert result.text == text
         assert [f.rule_id for f in result.remaining] == ["more-than-just"]
 
+    def test_rather_than_left_untouched_without_auto_fix(self, remediator: Remediator) -> None:
+        text = "Use a local cache rather than the network."
+        result = remediator.fix(text, Detector().scan(text, "text"))
+        assert result.text == text
+        assert [f.rule_id for f in result.remaining] == ["rather-than"]
+
     def test_structural_left_untouched_without_llm(self, remediator: Remediator) -> None:
         text = (
             "This is a long paragraph about style and its problems — mostly habit — "

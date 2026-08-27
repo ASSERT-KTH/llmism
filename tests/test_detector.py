@@ -58,6 +58,11 @@ class TestPhrasal:
         assert [f.rule_id for f in findings] == ["more-than-just"]
         assert findings[0].suggestion is None
 
+    def test_rather_than_flagged_without_auto_fix(self, detector: Detector) -> None:
+        findings = detector.scan("Use a local cache rather than the network.", "text")
+        assert [f.rule_id for f in findings] == ["rather-than"]
+        assert findings[0].suggestion is None
+
     def test_benefits_risks_trope(self, detector: Detector) -> None:
         text = "While this approach has benefits, it also carries risks."
         assert "has-benefits-carries-risks" in [f.rule_id for f in detector.scan(text, "text")]
