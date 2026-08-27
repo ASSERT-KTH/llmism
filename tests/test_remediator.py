@@ -43,6 +43,18 @@ class TestDeterministic:
         assert result.text == text
         assert [f.rule_id for f in result.remaining] == ["its-not-x-its-y"]
 
+    def test_merely_left_untouched_without_auto_fix(self, remediator: Remediator) -> None:
+        text = "This is merely a starting point."
+        result = remediator.fix(text, Detector().scan(text, "text"))
+        assert result.text == text
+        assert [f.rule_id for f in result.remaining] == ["merely"]
+
+    def test_more_than_just_left_untouched_without_auto_fix(self, remediator: Remediator) -> None:
+        text = "This is more than just a formatting tool."
+        result = remediator.fix(text, Detector().scan(text, "text"))
+        assert result.text == text
+        assert [f.rule_id for f in result.remaining] == ["more-than-just"]
+
     def test_structural_left_untouched_without_llm(self, remediator: Remediator) -> None:
         text = (
             "This is a long paragraph about style and its problems — mostly habit — "

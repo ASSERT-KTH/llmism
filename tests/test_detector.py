@@ -17,6 +17,12 @@ class TestLexical:
         assert findings[0].category == "lexical"
         assert findings[0].suggestion == "explore"
 
+    def test_merely_flagged_without_auto_fix(self, detector: Detector) -> None:
+        findings = detector.scan("This is merely a starting point.", "text")
+        assert [f.rule_id for f in findings] == ["merely"]
+        assert findings[0].category == "lexical"
+        assert findings[0].suggestion is None
+
     def test_clean_paragraph_has_no_lexical_findings(self, detector: Detector) -> None:
         text = "We looked at the data and found two errors. One was a typo."
         assert [f for f in detector.scan(text, "text") if f.category == "lexical"] == []
@@ -46,6 +52,11 @@ class TestPhrasal:
     def test_not_only_but_also(self, detector: Detector) -> None:
         findings = detector.scan("It is not only fast but also cheap.", "text")
         assert "not-only-but-also" in [f.rule_id for f in findings]
+
+    def test_more_than_just_flagged_without_auto_fix(self, detector: Detector) -> None:
+        findings = detector.scan("This is more than just a formatting tool.", "text")
+        assert [f.rule_id for f in findings] == ["more-than-just"]
+        assert findings[0].suggestion is None
 
     def test_benefits_risks_trope(self, detector: Detector) -> None:
         text = "While this approach has benefits, it also carries risks."

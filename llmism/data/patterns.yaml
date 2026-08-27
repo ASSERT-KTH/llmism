@@ -10,6 +10,10 @@
   category: lexical
   pattern: '\bgenuine(?:ly)?\b'
   suggestion: null
+- id: merely
+  category: lexical
+  pattern: '\bmerely\b'
+  suggestion: null
 - id: tapestry
   category: lexical
   pattern: '\btapestr(?:y|ies)\b'
@@ -117,6 +121,10 @@
 - id: not-only-but-also
   category: phrasal
   pattern: '\bnot only\b[^.;:!?]{1,80}\bbut also\b'
+  suggestion: null
+- id: more-than-just
+  category: phrasal
+  pattern: '\bmore than just\b'
   suggestion: null
 - id: whether-x-or-y-depends
   category: phrasal
