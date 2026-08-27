@@ -51,13 +51,15 @@ llmism fix post.md --llm --in-place
 
 | Tier | Rules |
 |---|---|
-| lexical | `delve`, `tapestry`, `pivotal`, `leverage`, `seamless`, `boundaries`, `robust`, ... |
-| phrasal | "it's not X, it's Y", "not only X but also Y", "while X has benefits, it also carries risks", `Furthermore`/`Moreover`, "It's worth noting that", ... |
-| structural | em-dash density, ≥3 consecutive bullets with `**bold**` lead-ins, self-answered rhetorical questions, uniform sentence-length rhythm (low burstiness) |
+| lexical | `delve`, `tapestry`, `pivotal`, `leverage`, `seamless`, `boundaries`, `robust`, `load-bearing`, ... |
+| phrasal | "it's not X, it's Y", "not only X but also Y", `-ing` tail clauses, vague attributions ("studies suggest"), cataloguing lead-ins ("uses several mechanisms... These methods..."), empty pivots ("it's worth noting"), significance inflation ("stands as a testament to"), `Furthermore`/`Moreover`, ... |
+| structural | em-dash overuse (per paragraph), transition-word clusters, sentence-opener repetition, hedge stacking, ≥3 bullets with `**bold**` lead-ins, self-answered rhetorical questions, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition |
 
 Pattern data lives in `llmism/data/patterns.yaml` — extend the list without
-touching code. Code fences (Markdown) and math/verbatim environments (LaTeX)
-are never scanned or rewritten.
+touching code. Code fences (Markdown) and math environments, verbatim blocks and
+`%` comments (LaTeX) are never scanned or rewritten. Several structural rules are
+inspired by the [sloptrim](https://github.com/seyedehsanhadi/sloptrim) pattern
+catalogue.
 
 ## Library use
 

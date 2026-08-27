@@ -124,7 +124,39 @@
   suggestion: null
 - id: in-todays-fast-paced
   category: phrasal
-  pattern: "in today'?s fast-paced \\w+"
+  pattern: "\\bin today'?s fast-paced \\w+"
+  suggestion: null
+- id: ing-tail
+  category: phrasal
+  pattern: ',\s+(?:highlighting|reflecting|symbolizing|emphasizing|underscoring|showcasing|fostering|cultivating|signaling|demonstrating|illustrating|representing|suggesting|reinforcing|leveraging|aligning|embodying|exemplifying|epitomizing)\b'
+  suggestion: null
+- id: vague-attribution
+  category: phrasal
+  pattern: '\b(?:experts (?:argue|believe|say|claim|note|suggest)|industry (?:reports|observers|analysts)|observers have (?:cited|noted)|some critics argue|researchers have found|studies suggest|it is widely believed)\b'
+  suggestion: null
+- id: catalog-leadin
+  category: phrasal
+  pattern: '\b(?:used|uses|employs?|employed|relied? on|utilizes?)\s+(?:several|various|a number of|multiple|different|many|numerous)\s+\w+'
+  suggestion: null
+- id: catalog-pivot
+  category: phrasal
+  pattern: '\bThese\s+(?:\w+\s+)?(?:provide|offer|give|reveal|show|allow|enable|help)'
+  suggestion: null
+- id: empty-pivot
+  category: phrasal
+  pattern: "\\bIt(?:'?s| is) (?:worth noting|worth mentioning|worth pointing out|interesting to note|important to note|important to remember)(?: that)?\\b"
+  suggestion: null
+- id: simple-yet
+  category: phrasal
+  pattern: '\bsimple yet (?:effective|powerful|profound|elegant|transformative)\b'
+  suggestion: null
+- id: colon-reveal
+  category: phrasal
+  pattern: "(?:Here'?s the thing|Make no mistake|The truth is|Let'?s be honest|At the end of the day|The bottom line is|At its core|Fundamentally)\\b[,:]?"
+  suggestion: null
+- id: significance-inflation
+  category: phrasal
+  pattern: '\b(?:stands? as a testament to|serves? as a testament to|marked a turning point|setting the stage for|reshaping our understanding of|paving the way for|raising questions about|sparking debate about)\b'
   suggestion: null
 - id: look-no-further
   category: phrasal

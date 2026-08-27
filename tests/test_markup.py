@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import pytest
 
-from llmism._markup import bold_lead_in_bullets, scannable_ranges, split_sentences
+from llmism._markup import (
+    bold_lead_in_bullets,
+    scannable_ranges,
+    split_paragraphs,
+    split_sentences,
+)
 from llmism._patterns import compiled_patterns, load_patterns
 
 
 class TestPatternsData:
     def test_seed_list_is_curated_size(self) -> None:
         pats = load_patterns()
-        assert 20 <= len(pats) <= 40
+        assert 20 <= len(pats) <= 60
 
     def test_unique_ids_and_valid_categories(self) -> None:
         pats = load_patterns()
@@ -126,24 +131,53 @@ def test_seed_patterns_fire(word: str, expected: str) -> None:
 class TestLatexComments:
     def test_comment_lines_excluded(self) -> None:
         text = "% delve into boundaries\nclean line\n"
-        covered = "".join(
-            text[s.start : s.end] for s in scannable_ranges(text, "latex")
-        )
+        covered = "".join(text[s.start : s.end] for s in scannable_ranges(text, "latex"))
         assert "delve" not in covered
         assert "clean line" in covered
 
     def test_trailing_comment_excluded(self) -> None:
         text = "clean % delve trailing\nnext"
-        covered = "".join(
-            text[s.start : s.end] for s in scannable_ranges(text, "latex")
-        )
+        covered = "".join(text[s.start : s.end] for s in scannable_ranges(text, "latex"))
         assert "delve" not in covered
         assert "clean" in covered and "next" in covered
 
     def test_escaped_percent_kept(self) -> None:
         text = "50\\% accuracy % delve\n"
-        covered = "".join(
-            text[s.start : s.end] for s in scannable_ranges(text, "latex")
-        )
+        covered = "".join(text[s.start : s.end] for s in scannable_ranges(text, "latex"))
         assert "50\\%" in covered
         assert "delve" not in covered
+
+
+class TestSplitParagraphs:
+    def test_offsets_point_into_original(self) -> None:
+        text = "First para here.\n\nSecond para follows.\n\nThird one ends."
+        for para, start, end in split_paragraphs(text, "text"):
+            assert text[start:end].strip() == para
+
+    def test_blank_lines_split(self) -> None:
+        paras = [p for p, _a, _b in split_paragraphs("A.\n\nB.", "text")]
+        assert paras == ["A.", "B."]
+
+    def test_markdown_heading_splits(self) -> None:
+        text = "Intro text.\n# Section\nBody here."
+        paras = [p for p, _a, _b in split_paragraphs(text, "markdown")]
+        assert paras == ["Intro text.", "Body here."]
+
+    def test_horizontal_rule_is_not_a_paragraph(self) -> None:
+        text = "Above.\n\n---\n\nBelow.\n"
+        paras = [p for p, _a, _b in split_paragraphs(text, "markdown")]
+        assert paras == ["Above.", "Below."]
+
+    def test_code_fence_content_excluded(self) -> None:
+        text = "Before.\n```python\nx = 1\n```\nAfter."
+        paras = [p for p, _a, _b in split_paragraphs(text, "markdown")]
+        assert paras == ["Before.", "After."]
+
+    def test_latex_comment_lines_ignored(self) -> None:
+        text = "Real prose.\n% comment only\n\nMore prose.\n"
+        paras = [p for p, _a, _b in split_paragraphs(text, "latex")]
+        assert paras == ["Real prose.", "More prose."]
+
+    def test_abbreviation_does_not_break_sentences(self) -> None:
+        sents = [s for s, _a, _b in split_sentences("See Fig. 3 for details.", "text")]
+        assert sents == ["See Fig. 3 for details."]

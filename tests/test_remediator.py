@@ -53,7 +53,7 @@ class TestDeterministic:
         findings = Detector().scan(text, "text")
         result = remediator.fix(text, findings)
         assert result.text == text
-        assert any(f.rule_id == "em-dash-density" for f in result.remaining)
+        assert any(f.rule_id == "em-dash-overuse" for f in result.remaining)
         assert result.llm_fixed == []
 
 
