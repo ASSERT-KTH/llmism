@@ -12,6 +12,9 @@ _LATEX_ENV = re.compile(
     r"gather\*?|multline\*?|eqnarray\*?|math|tabular\*?)\}.*?\\end\{\1\}",
     re.DOTALL | re.IGNORECASE,
 )
+# '%' to end of line, but not '\%' (escaped) nor '\\%' (line break then comment
+# is real — handled below) and not inside verbatim (excluded beforehand).
+_LATEX_COMMENT = re.compile(r"(?<!\\)(?<!\\\\)%[^\n]*")
 _LATEX_INLINE_MATH = re.compile(r"\$[^$\n]*\$|\\\(.*?\\\)|\\\[.*?\\\]", re.DOTALL)
 _MD_FENCE_LINE = re.compile(r"^\s*(```+|~~~+)")
 _MD_INLINE_CODE = re.compile(r"`+[^`\n]*`+")
@@ -89,7 +92,7 @@ def scannable_ranges(text: str, fmt: str = "markdown") -> list[Span]:
             )
         return ranges
     if fmt == "latex":
-        return _exclude(text, (_LATEX_ENV, _LATEX_INLINE_MATH))
+        return _exclude(text, (_LATEX_ENV, _LATEX_COMMENT, _LATEX_INLINE_MATH))
     return [Span(0, len(text))]
 
 

@@ -121,3 +121,29 @@ def test_seed_patterns_fire(word: str, expected: str) -> None:
         if f.category in ("lexical", "phrasal")
     ]
     assert expected in " ".join(f.matched_text for f in hits)
+
+
+class TestLatexComments:
+    def test_comment_lines_excluded(self) -> None:
+        text = "% delve into boundaries\nclean line\n"
+        covered = "".join(
+            text[s.start : s.end] for s in scannable_ranges(text, "latex")
+        )
+        assert "delve" not in covered
+        assert "clean line" in covered
+
+    def test_trailing_comment_excluded(self) -> None:
+        text = "clean % delve trailing\nnext"
+        covered = "".join(
+            text[s.start : s.end] for s in scannable_ranges(text, "latex")
+        )
+        assert "delve" not in covered
+        assert "clean" in covered and "next" in covered
+
+    def test_escaped_percent_kept(self) -> None:
+        text = "50\\% accuracy % delve\n"
+        covered = "".join(
+            text[s.start : s.end] for s in scannable_ranges(text, "latex")
+        )
+        assert "50\\%" in covered
+        assert "delve" not in covered

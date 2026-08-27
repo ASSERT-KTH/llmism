@@ -157,3 +157,14 @@ class TestFindingShape:
         assert f.start < f.end
         assert "delv" in f.matched_text
         assert f.message
+
+
+class TestLoadBearing:
+    def test_load_bearing_flagged(self, detector: Detector) -> None:
+        (f,) = detector.scan("This is a load-bearing dependency.", "text")
+        assert f.rule_id == "load-bearing"
+        assert f.suggestion == "essential"
+
+    def test_hyphenated_and_spaced_variants(self, detector: Detector) -> None:
+        ids = [f.rule_id for f in detector.scan("a load-bearing wall; a load bearing role", "text")]
+        assert ids.count("load-bearing") == 2

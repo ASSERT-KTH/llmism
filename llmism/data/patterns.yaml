@@ -54,6 +54,10 @@
   category: lexical
   pattern: '\brobust\b'
   suggestion: "solid"
+- id: load-bearing
+  category: lexical
+  pattern: '\bload[- ]bearing\b'
+  suggestion: "essential"
 - id: unlock-potential
   category: lexical
   pattern: '\bunlock (?:\w+ )?potential\b'
