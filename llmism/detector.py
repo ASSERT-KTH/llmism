@@ -36,6 +36,7 @@ REP_MIN_WORDS = REP_N * 3
 REP_THRESHOLD = 0.20
 HEDGE_STACK_MIN = 2
 MIN_WORDS_FOR_SYN_CLUSTERS = 40
+SYNONYM_WINDOW_WORDS = 300  # cycling = same referent, so terms must be near each other
 
 EM_DASH = "\N{EM DASH}"
 
@@ -328,25 +329,57 @@ class Detector:
 
     # -- structural: vocabulary-level ------------------------------------------
     def _scan_synonym_cycling(self, text: str, fmt: str) -> list[Finding]:
-        """Three or more synonyms from one cluster used for the same referent."""
+        """Three or more synonyms from one cluster within a sliding window.
+
+        Cycling means using interchangeable terms for the *same* referent;
+        terms spread over a whole document usually refer to different things
+        (a grant proposal legitimately says "tool", "system" and "technology").
+        """
         chunks = [text[s.start : s.end] for s in scannable_ranges(text, fmt)]
-        lower = "\n".join(chunks).lower()
-        if len(lower.split()) < MIN_WORDS_FOR_SYN_CLUSTERS:
+        words = [w.lower() for c in chunks for w in _REP_WORD.findall(c)]
+        if len(words) < MIN_WORDS_FOR_SYN_CLUSTERS:
             return []
+        term_patterns = {
+            term: re.compile(rf"\b{re.escape(term)}s?\b")
+            for cluster in _SYNONYM_CLUSTERS
+            for term in cluster
+        }
         findings: list[Finding] = []
-        for cluster in _SYNONYM_CLUSTERS:
-            used = [t for t in cluster if re.search(rf"\b{re.escape(t)}s?\b", lower)]
-            if len(used) >= 3:
+        cluster_terms: dict[int, list[int]] = {}
+        for ci, cluster in enumerate(_SYNONYM_CLUSTERS):
+            positions: dict[str, list[int]] = {}
+            for i, w in enumerate(words):
+                for term in cluster:
+                    if term_patterns[term].fullmatch(w):
+                        positions.setdefault(term, []).append(i)
+            cluster_terms[ci] = [p for ps in positions.values() for p in ps]
+        for ci, cluster in enumerate(_SYNONYM_CLUSTERS):
+            all_positions = sorted(cluster_terms[ci])
+            if len(all_positions) < 3:
+                continue
+            # sliding window over word indices
+            best: tuple[int, set[str]] = (0, set())
+            lo = 0
+            for hi, p in enumerate(all_positions):
+                while p - all_positions[lo] > SYNONYM_WINDOW_WORDS:
+                    lo += 1
+                window = all_positions[lo : hi + 1]
+                distinct_terms = {
+                    t for t in cluster if any(term_patterns[t].fullmatch(words[q]) for q in window)
+                }
+                if len(distinct_terms) > len(best[1]):
+                    best = (p, distinct_terms)
+            if len(best[1]) >= 3:
                 findings.append(
                     Finding(
                         category="structural",
                         rule_id="synonym-cycling",
                         start=0,
                         end=len(text),
-                        matched_text=", ".join(used),
+                        matched_text=", ".join(sorted(best[1])),
                         message=(
-                            "Synonym cycling: "
-                            f"{len(used)} of {', '.join(used)} used interchangeably"
+                            f"Synonym cycling: {len(best[1])} interchangeable terms "
+                            f"({', '.join(sorted(best[1]))}) within {SYNONYM_WINDOW_WORDS} words"
                         ),
                     )
                 )

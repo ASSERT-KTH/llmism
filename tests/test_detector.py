@@ -313,3 +313,24 @@ class TestNewPhrasalRules:
         assert "significance-inflation" in [
             f.rule_id for f in detector.scan("It stands as a testament to his work.", "text")
         ]
+
+    def test_synonym_cycling_requires_proximity(self, detector: Detector) -> None:
+        """Same-cluster terms far apart usually name different referents."""
+        text = (
+            "Our company ships one tool for analysts working on market data. "
+            + " ".join(
+                f"Filler sentence number {i} talks about ordinary topics." for i in range(60)
+            )
+            + " Decades later a separate system was built and the underlying technology matured."
+        )
+        assert "synonym-cycling" not in [f.rule_id for f in detector.scan(text, "text")]
+
+    def test_synonym_cycling_same_referent(self, detector: Detector) -> None:
+        text = (
+            "The firm shipped early and often. The company grew fast afterwards. "
+            "The organization hired many people that year. The business then "
+            "plateaued for a year before restarting its slow expansion into two "
+            "new regional markets abroad, which took considerable time overall."
+        )
+        (f,) = [f for f in detector.scan(text, "text") if f.rule_id == "synonym-cycling"]
+        assert "company" in f.message
