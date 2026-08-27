@@ -6,6 +6,10 @@
   category: lexical
   pattern: '\bdelv(?:e|es|ed|ing)\b'
   suggestion: "explore"
+- id: genuine
+  category: lexical
+  pattern: '\bgenuine(?:ly)?\b'
+  suggestion: null
 - id: tapestry
   category: lexical
   pattern: '\btapestr(?:y|ies)\b'

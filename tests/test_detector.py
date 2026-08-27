@@ -334,3 +334,8 @@ class TestNewPhrasalRules:
         )
         (f,) = [f for f in detector.scan(text, "text") if f.rule_id == "synonym-cycling"]
         assert "company" in f.message
+
+    def test_genuine_variants(self, detector: Detector) -> None:
+        assert [f.rule_id for f in detector.scan("a genuine gain", "text")] == ["genuine"]
+        assert [f.rule_id for f in detector.scan("genuinely different", "text")] == ["genuine"]
+        assert "genuine" not in [f.rule_id for f in detector.scan("ingenuous", "text")]
