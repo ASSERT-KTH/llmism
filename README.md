@@ -1,6 +1,79 @@
-We are working on a detector of LLMisms, that is idioms overly used by LLMs which give a bad impression on the reader.
-Eg.  em-dash. 'it's not X, it's Y', "rather than", "delve", etc.
+# llmism
 
-Read on the internet about this.
+Detector and remediator for *LLMisms* — idioms and tics overused by language
+models that make prose sound machine-generated: `delve`, "it's not X, it's Y",
+em-dash overuse, bolded bullet lead-ins, uniform sentence rhythm, and friends.
 
-Make a plan for implementing a detector of LLMisms and a remediator.
+## Install (local prototype)
+
+```sh
+pip install -e ".[dev]"
+```
+
+## Detect
+
+```sh
+llmism detect README.md          # console table, exit 1 if findings
+llmism detect doc.tex            # .tex → LaTeX, .md → Markdown, else text
+llmism detect - --format markdown < draft.txt
+llmism detect post.md --json     # machine-readable findings
+```
+
+```
+LINE  CATEGORY   RULE                     MATCH
+-----  ---------  -----------------------  ------------------------------------
+3      lexical    delve                    'delve'
+3      lexical    leverage-verb            'leverage'
+5      phrasal    its-not-x-its-y          "It's not a bug, it's "
+```
+
+## Fix
+
+```sh
+llmism fix post.md                    # rewritten text on stdout
+llmism fix post.md --in-place         # rewrite the file
+llmism fix post.md --json             # {text, fixed, remaining, ...}
+```
+
+- **Lexical/phrasal findings with a safe replacement** are rewritten
+  deterministically (capitalisation preserved, offsets applied right-to-left).
+- **Structural findings** (em-dash density, bold-lead-in bullets, rhetorical
+  Q&A pairs, low burstiness) have no safe deterministic rewrite. They are
+  reported as `remaining` unless you pass `--llm`:
+
+```sh
+pip install -e ".[llm]"   # optional anthropic extra
+export ANTHROPIC_API_KEY=...
+llmism fix post.md --llm --in-place
+```
+
+## What is detected
+
+| Tier | Rules |
+|---|---|
+| lexical | `delve`, `tapestry`, `pivotal`, `leverage`, `seamless`, `boundaries`, `robust`, ... |
+| phrasal | "it's not X, it's Y", "not only X but also Y", "while X has benefits, it also carries risks", `Furthermore`/`Moreover`, "It's worth noting that", ... |
+| structural | em-dash density, ≥3 consecutive bullets with `**bold**` lead-ins, self-answered rhetorical questions, uniform sentence-length rhythm (low burstiness) |
+
+Pattern data lives in `llmism/data/patterns.yaml` — extend the list without
+touching code. Code fences (Markdown) and math/verbatim environments (LaTeX)
+are never scanned or rewritten.
+
+## Library use
+
+```python
+from llmism import Detector, Remediator
+
+findings = Detector().scan(text, "markdown")
+result = Remediator().fix(text, findings)
+print(result.remaining)   # findings left for manual fixing
+```
+
+## Development
+
+```sh
+pytest -q --cov=llmism
+ruff check . && mypy llmism
+```
+
+MIT licensed. See [LICENSE](LICENSE).

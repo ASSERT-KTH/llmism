@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llmism"
+version = "0.1.0"
+description = "Detector and remediator for LLM-sounding idioms in prose"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Martin Monperrus", email = "martin.monperrus@gnieh.org" }]
+requires-python = ">=3.10"
+keywords = ["llm", "writing", "style", "detector", "prose"]
+dependencies = ["PyYAML>=6"]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "mypy", "ruff", "types-PyYAML"]
+llm = ["anthropic"]
+
+[project.scripts]
+llmism = "llmism.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["llmism"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[[tool.mypy.overrides]]
+module = "anthropic"
+ignore_missing_imports = true
