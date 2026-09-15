@@ -63,6 +63,8 @@ _LIST_MARKER = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s*")
 _SKIP_LINE = re.compile(r"^\s*(?:#{1,6}\s|\||>\s|```)")
 _URL_COLON = re.compile(r"://|\bhttps?$|\bftp$|\bmailto$")
 _TIME_COLON = re.compile(r"\d$")
+# code, shell and hex-dump lines are not prose, whatever punctuation they carry
+_CODEY = re.compile(r"[=<>{}\[\]|$\\]|0x|::|\w\(\)|/\w+/")
 
 # verbless fragments used as sentences ("Two things worth watching.")
 FRAGMENT_MAX_WORDS = 6
@@ -127,7 +129,7 @@ class Detector:
         findings.extend(self._scan_rhetorical_questions(text, fmt))
         findings.extend(self._scan_colon_clauses(text, ranges))
         findings.extend(self._scan_verbless_fragments(text, fmt))
-        findings.extend(self._scan_sentence_headers(text, fmt))
+        findings.extend(self._scan_sentence_headers(text, fmt, ranges))
         findings.extend(self._scan_burstiness(text, fmt))
         findings.extend(self._scan_paragraph_monotony(text, fmt))
         findings.extend(self._scan_cadence(text, fmt))
@@ -294,6 +296,8 @@ class Detector:
             right = text[pos + 1 : line_end]
             if _URL_COLON.search(left) or (_TIME_COLON.search(left) and right[:1].isdigit()):
                 continue
+            if _CODEY.search(line):
+                continue  # shell, hex dumps, expressions: not prose
             if not right.strip():  # label line, payload on the next line
                 continue
             label = _LIST_MARKER.sub("", left)
@@ -332,7 +336,7 @@ class Detector:
                 continue
             if not _FRAGMENT_OPENER.match(stripped):
                 continue
-            if _FINITE_VERB.search(stripped):
+            if _FINITE_VERB.search(stripped) or _CODEY.search(stripped) or "`" in stripped:
                 continue
             findings.append(
                 Finding(
@@ -350,12 +354,14 @@ class Detector:
         return findings
 
     # -- structural: headers ----------------------------------------------------
-    def _scan_sentence_headers(self, text: str, fmt: str) -> list[Finding]:
+    def _scan_sentence_headers(self, text: str, fmt: str, ranges: list[Span]) -> list[Finding]:
         """Markdown headers written as sentences rather than labels."""
         if fmt != "markdown":
             return []
         findings: list[Finding] = []
         for m in _MD_HEADER.finditer(text):
+            if not any(s.start <= m.start() and m.end() <= s.end for s in ranges):
+                continue  # shell comment inside a code fence, not a header
             title = m.group(2)
             words = title.split()
             too_long = len(words) > HEADER_MAX_WORDS

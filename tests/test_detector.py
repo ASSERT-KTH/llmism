@@ -396,3 +396,11 @@ class TestNewPhrasalRules:
         assert "depth-signaling" in rules
         rules = [f.rule_id for f in detector.scan("The key insight is that x.", "text")]
         assert "announcing-label" in rules
+
+    def test_colon_clause_skips_code_lines(self, detector: Detector) -> None:
+        text = "byte0=0x80: low7 is zero so it continues.\nLet me map the positions here."
+        assert "colon-clause" not in [f.rule_id for f in detector.scan(text, "text")]
+
+    def test_sentence_header_skips_code_fences(self, detector: Detector) -> None:
+        text = "```sh\n# 2. the real test is to swap the cable and retry\nls\n```\n"
+        assert "sentence-header" not in [f.rule_id for f in detector.scan(text)]
