@@ -11,11 +11,11 @@ def detector() -> Detector:
 
 
 class TestLexical:
-    def test_delve_flagged_with_suggestion(self, detector: Detector) -> None:
-        findings = detector.scan("We delve into the data.", "text")
-        assert [f.rule_id for f in findings] == ["delve"]
+    def test_leverage_flagged_with_suggestion(self, detector: Detector) -> None:
+        findings = detector.scan("We leverage the data.", "text")
+        assert [f.rule_id for f in findings] == ["leverage-verb"]
         assert findings[0].category == "lexical"
-        assert findings[0].suggestion == "explore"
+        assert findings[0].suggestion == "use"
 
     def test_merely_flagged_without_auto_fix(self, detector: Detector) -> None:
         findings = detector.scan("This is merely a starting point.", "text")
@@ -33,8 +33,8 @@ class TestLexical:
         assert "boundaries" not in [f.rule_id for f in findings]
 
     def test_capitalised_match(self, detector: Detector) -> None:
-        findings = detector.scan("Delve deeper.", "text")
-        assert findings[0].matched_text == "Delve"
+        findings = detector.scan("Merely a start.", "text")
+        assert findings[0].matched_text == "Merely"
 
     def test_case_insensitive_offsets_are_exact(self, detector: Detector) -> None:
         text = "It will LEVERAGE the API."
@@ -49,23 +49,10 @@ class TestPhrasal:
         assert findings[0].category == "phrasal"
         assert findings[0].suggestion is None  # flagged, not auto-fixed
 
-    def test_not_only_but_also(self, detector: Detector) -> None:
-        findings = detector.scan("It is not only fast but also cheap.", "text")
-        assert "not-only-but-also" in [f.rule_id for f in findings]
-
-    def test_more_than_just_flagged_without_auto_fix(self, detector: Detector) -> None:
-        findings = detector.scan("This is more than just a formatting tool.", "text")
-        assert [f.rule_id for f in findings] == ["more-than-just"]
-        assert findings[0].suggestion is None
-
     def test_rather_than_flagged_without_auto_fix(self, detector: Detector) -> None:
         findings = detector.scan("Use a local cache rather than the network.", "text")
         assert [f.rule_id for f in findings] == ["rather-than"]
         assert findings[0].suggestion is None
-
-    def test_benefits_risks_trope(self, detector: Detector) -> None:
-        text = "While this approach has benefits, it also carries risks."
-        assert "has-benefits-carries-risks" in [f.rule_id for f in detector.scan(text, "text")]
 
     def test_normal_prose_not_flagged(self, detector: Detector) -> None:
         text = "The tool found two bugs and reported them. We fixed both today."
@@ -114,19 +101,6 @@ class TestStructural:
         text = "- **Performance:** fast.\n- plain item\n- **Cost:** cheap.\n"
         assert "bold-lead-in-bullets" not in [f.rule_id for f in Detector().scan(text, "markdown")]
 
-    def test_rhetorical_question_answered(self, detector: Detector) -> None:
-        text = "Why does this matter? The answer is simple: readers notice."
-        findings = [
-            f for f in Detector().scan(text, "text") if f.rule_id == "rhetorical-question-answer"
-        ]
-        assert len(findings) == 1
-
-    def test_plain_question_not_flagged(self, detector: Detector) -> None:
-        text = "Did you run the tests? They passed on my machine."
-        assert "rhetorical-question-answer" not in [
-            f.rule_id for f in Detector().scan(text, "text")
-        ]
-
     def test_low_burstiness_whole_doc(self, detector: Detector) -> None:
         text = (
             "The system parses the input text carefully. "
@@ -154,33 +128,33 @@ class TestStructural:
 
 class TestFormats:
     def test_markdown_code_fence_ignored(self, detector: Detector) -> None:
-        text = "Clean intro.\n\n```python\ndelve into boundaries\n```\n\nClean outro.\n"
+        text = "Clean intro.\n\n```python\nleverage into boundaries\n```\n\nClean outro.\n"
         assert detector.scan(text, "markdown") == []
 
     def test_inline_code_ignored(self, detector: Detector) -> None:
-        assert detector.scan("Use `delve` carefully.", "markdown") == []
+        assert detector.scan("Use `leverage` carefully.", "markdown") == []
 
     def test_latex_math_ignored(self, detector: Detector) -> None:
         text = (
-            "Clean text here.\n\\begin{equation}\ndelve = leverage\n\\end{equation}\n"
-            "More clean text $delve$ inline.\n"
+            "Clean text here.\n\\begin{equation}\nleverage = leverage\n\\end{equation}\n"
+            "More clean text $leverage$ inline.\n"
         )
         assert detector.scan(text, "latex") == []
 
     def test_latex_verbatim_ignored(self, detector: Detector) -> None:
-        text = "\\begin{verbatim}\ndelve deep\n\\end{verbatim}\n"
+        text = "\\begin{verbatim}\nleverage deep\n\\end{verbatim}\n"
         assert detector.scan(text, "latex") == []
 
     def test_plain_text_format_scans_everything(self, detector: Detector) -> None:
-        assert [f.rule_id for f in Detector().scan("delve", "text")] == ["delve"]
+        assert [f.rule_id for f in Detector().scan("leverage", "text")] == ["leverage-verb"]
 
 
 class TestFindingShape:
     def test_finding_fields(self, detector: Detector) -> None:
-        (f,) = detector.scan("It delves deep.", "text")
+        (f,) = detector.scan("It leverages deep.", "text")
         assert isinstance(f, Finding)
         assert f.start < f.end
-        assert "delv" in f.matched_text
+        assert "leverag" in f.matched_text
         assert f.message
 
 
@@ -196,23 +170,6 @@ class TestLoadBearing:
 
 
 class TestNewStructuralRules:
-    def test_transition_cluster(self, detector: Detector) -> None:
-        text = (
-            "The team launched the product in Q1. Additionally, they expanded to "
-            "three new markets. Furthermore, satisfaction improved. Moreover, churn "
-            "dropped below five percent."
-        )
-        (f,) = [f for f in detector.scan(text, "text") if f.rule_id == "transition-cluster"]
-        assert "Additionally" in f.message and "Moreover" in f.message
-
-    def test_single_transition_not_flagged(self, detector: Detector) -> None:
-        text = "One sentence here. Furthermore, a second one follows it now."
-        assert "transition-cluster" not in [f.rule_id for f in detector.scan(text, "text")]
-
-    def test_transition_cluster_scoped_to_paragraph(self, detector: Detector) -> None:
-        text = "Para one uses Additionally here.\n\nPara two uses Furthermore instead.\n"
-        assert "transition-cluster" not in [f.rule_id for f in detector.scan(text, "text")]
-
     def test_opener_repetition(self, detector: Detector) -> None:
         text = (
             "The client retries twice. The client waits longer each time. "
@@ -300,34 +257,9 @@ class TestNewPhrasalRules:
         text = "The cache was cleared, resulting in faster builds for everyone."
         assert "ing-tail" not in [f.rule_id for f in detector.scan(text, "text")]
 
-    def test_vague_attribution(self, detector: Detector) -> None:
-        assert "vague-attribution" in [
-            f.rule_id for f in detector.scan("Studies suggest a link.", "text")
-        ]
-
-    def test_catalog_leadin(self, detector: Detector) -> None:
-        assert "catalog-leadin" in [
-            f.rule_id for f in detector.scan("It uses several methods here.", "text")
-        ]
-
-    def test_catalog_pivot(self, detector: Detector) -> None:
-        assert "catalog-pivot" in [
-            f.rule_id for f in detector.scan("These methods give the team headroom.", "text")
-        ]
-
-    def test_empty_pivot(self, detector: Detector) -> None:
-        assert "empty-pivot" in [
-            f.rule_id for f in detector.scan("It's worth noting that it returns null.", "text")
-        ]
-
-    def test_simple_yet(self, detector: Detector) -> None:
-        assert "simple-yet" in [
-            f.rule_id for f in detector.scan("The tool is simple yet powerful.", "text")
-        ]
-
-    def test_significance_inflation(self, detector: Detector) -> None:
-        assert "significance-inflation" in [
-            f.rule_id for f in detector.scan("It stands as a testament to his work.", "text")
+    def test_colon_reveal(self, detector: Detector) -> None:
+        assert "colon-reveal" in [
+            f.rule_id for f in detector.scan("Here's the thing, it returns null.", "text")
         ]
 
     def test_synonym_cycling_requires_proximity(self, detector: Detector) -> None:
@@ -388,8 +320,12 @@ class TestNewPhrasalRules:
         assert "sentence-header" not in [f.rule_id for f in detector.scan("## Installation\n\nx\n")]
 
     def test_latinate_suggestions(self, detector: Detector) -> None:
-        (f,) = [f for f in detector.scan("We utilize it.", "text") if f.rule_id == "utilize"]
-        assert f.suggestion == "use"
+        (f,) = [
+            f
+            for f in detector.scan("Approximately ten runs.", "text")
+            if f.rule_id == "approximately"
+        ]
+        assert f.suggestion == "about"
 
     def test_depth_signaling_and_announcing(self, detector: Detector) -> None:
         rules = [f.rule_id for f in detector.scan("At a more fundamental level, x.", "text")]

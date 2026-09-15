@@ -13,24 +13,24 @@ def remediator() -> Remediator:
 
 class TestDeterministic:
     def test_lexical_replacement(self, remediator: Remediator) -> None:
-        text = "We delve into the data."
+        text = "We leverage the data."
         findings = Detector().scan(text, "text")
         result = remediator.fix(text, findings)
-        assert result.text == "We explore into the data."
-        assert [f.rule_id for f in result.fixed] == ["delve"]
+        assert result.text == "We use the data."
+        assert [f.rule_id for f in result.fixed] == ["leverage-verb"]
         assert result.remaining == []
 
     def test_capitalisation_preserved(self, remediator: Remediator) -> None:
-        text = "Delve deeper."
+        text = "Leverage it."
         findings = Detector().scan(text, "text")
         result = remediator.fix(text, findings)
-        assert result.text == "Explore deeper."
+        assert result.text == "Use it."
 
     def test_multiple_fixes_offsets_stay_valid(self, remediator: Remediator) -> None:
-        text = "We delve into it and leverage the tool. It also has boundaries."
+        text = "We elevate it and leverage the tool. It also has boundaries."
         findings = Detector().scan(text, "text")
         result = remediator.fix(text, findings)
-        assert "delve" not in result.text
+        assert "elevate" not in result.text
         assert "leverage" not in result.text
         assert "boundaries" not in result.text
         assert "use the tool" in result.text
@@ -48,12 +48,6 @@ class TestDeterministic:
         result = remediator.fix(text, Detector().scan(text, "text"))
         assert result.text == text
         assert [f.rule_id for f in result.remaining] == ["merely"]
-
-    def test_more_than_just_left_untouched_without_auto_fix(self, remediator: Remediator) -> None:
-        text = "This is more than just a formatting tool."
-        result = remediator.fix(text, Detector().scan(text, "text"))
-        assert result.text == text
-        assert [f.rule_id for f in result.remaining] == ["more-than-just"]
 
     def test_rather_than_left_untouched_without_auto_fix(self, remediator: Remediator) -> None:
         text = "Use a local cache rather than the network."
@@ -79,7 +73,7 @@ class TestLlmPath:
     def test_llm_rewrite_applied_with_mocked_client(
         self, remediator: Remediator, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        text = "Why use it? The answer is that it helps."
+        text = "Style is a habit — mostly — and it shows — often."
 
         class FakeBlock:
             type = "text"
@@ -104,12 +98,12 @@ class TestLlmPath:
         findings = Detector().scan(text, "text")
         result = remediator.fix(text, findings, use_llm=True)
         assert "It helps, in short." in result.text
-        assert any(f.rule_id == "rhetorical-question-answer" for f in result.llm_fixed)
+        assert any(f.rule_id == "em-dash-overuse" for f in result.llm_fixed)
 
     def test_llm_error_surfaced(
         self, remediator: Remediator, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        text = "Why use it? The answer is that it helps."
+        text = "Style is a habit — mostly — and it shows — often."
         findings = Detector().scan(text, "text")
         monkeypatch.setattr(
             "llmism.remediator.rewrite_spans",

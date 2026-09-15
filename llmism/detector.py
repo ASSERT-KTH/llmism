@@ -30,7 +30,6 @@ PARAGRAPH_MIN_COUNT = 4
 CADENCE_ZIGZAG = 0.85  # share of successive length-difference sign flips
 CADENCE_MIN_CV = 0.25
 OPENER_REPETITION_MIN = 3
-TRANSITION_CLUSTER_MIN = 2
 REP_N = 6  # n-gram size for degenerate repetition
 REP_MIN_WORDS = REP_N * 3
 REP_THRESHOLD = 0.20
@@ -40,21 +39,12 @@ SYNONYM_WINDOW_WORDS = 300  # cycling = same referent, so terms must be near eac
 
 EM_DASH = "\N{EM DASH}"
 
-_TRANSITION_OPENER = re.compile(
-    r"(?:^|\n|[.!?]\s+)(Additionally|Furthermore|Moreover|However|Nevertheless|"
-    r"Consequently|Subsequently|Notably)\b"
-)
 _HEDGE = re.compile(
     r"\b(?:may|might|could|possibly|potentially|arguably|perhaps|"
     r"seems?(?:\s+(?:to|like))?|appears?\s+to|somewhat|relatively|fairly|"
     r"kind of|sort of)\b",
     re.IGNORECASE,
 )
-_RQ_ANSWER_START = re.compile(
-    r"^\s*(?:the answer is|yes[,.]|no[,.]|it is|that'?s because)\b", re.IGNORECASE
-)
-_SENT_END_Q = re.compile(r"\?\s*$")
-
 # colon-hinged sentences: a colon is only legitimate before a list of 3+ items
 COLON_LIST_MIN_ITEMS = 3
 COLON_LABEL_MAX_WORDS = 3  # shorter left sides are key-value specs, not clauses
@@ -126,7 +116,6 @@ class Detector:
         findings.extend(self._scan_patterns(text, ranges))
         findings.extend(self._scan_bold_lead_ins(text, fmt))
         findings.extend(self._scan_paragraph_rules(text, fmt))
-        findings.extend(self._scan_rhetorical_questions(text, fmt))
         findings.extend(self._scan_colon_clauses(text, ranges))
         findings.extend(self._scan_verbless_fragments(text, fmt))
         findings.extend(self._scan_sentence_headers(text, fmt, ranges))
@@ -200,22 +189,6 @@ class Detector:
                         ),
                     )
                 )
-            # transition-word cluster
-            transitions = list(_TRANSITION_OPENER.finditer(para))
-            if len(transitions) >= TRANSITION_CLUSTER_MIN:
-                findings.append(
-                    Finding(
-                        category="structural",
-                        rule_id="transition-cluster",
-                        start=p_start + transitions[0].start(1),
-                        end=p_start + transitions[-1].end(1),
-                        matched_text=", ".join(m.group(1) for m in transitions),
-                        message=(
-                            f"{len(transitions)} stacked transition words in one paragraph "
-                            f"({', '.join(m.group(1) for m in transitions)})"
-                        ),
-                    )
-                )
             # sentence-opener repetition
             sents = [s for s, _a, _b in split_sentences(para, "text")]
             if len(sents) >= OPENER_REPETITION_MIN:
@@ -255,27 +228,6 @@ class Detector:
                             ),
                         )
                     )
-        return findings
-
-    # -- structural: rhetorical Q&A -------------------------------------------
-    def _scan_rhetorical_questions(self, text: str, fmt: str) -> list[Finding]:
-        sentences = split_sentences(text, fmt)
-        findings: list[Finding] = []
-        for (q, qs, _qe), (a, _as, ae) in zip(sentences, sentences[1:], strict=False):
-            if not _SENT_END_Q.search(q):
-                continue
-            if not _RQ_ANSWER_START.match(a):
-                continue
-            findings.append(
-                Finding(
-                    category="structural",
-                    rule_id="rhetorical-question-answer",
-                    start=qs,
-                    end=ae,
-                    matched_text=text[qs:ae],
-                    message="Rhetorical question immediately answered; restate directly",
-                )
-            )
         return findings
 
     # -- structural: colon-hinged sentences -------------------------------------

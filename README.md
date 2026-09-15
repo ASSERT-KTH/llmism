@@ -37,8 +37,8 @@ llmism fix post.md --json             # {text, fixed, remaining, ...}
 
 - **Lexical/phrasal findings with a safe replacement** are rewritten
   deterministically (capitalisation preserved, offsets applied right-to-left).
-- **Structural findings** (em-dash density, bold-lead-in bullets, rhetorical
-  Q&A pairs, low burstiness) have no safe deterministic rewrite. They are
+- **Structural findings** (em-dash density, bold-lead-in bullets, colon-hinged
+  sentences, low burstiness) have no safe deterministic rewrite. They are
   reported as `remaining` unless you pass `--llm`:
 
 ```sh
@@ -51,9 +51,14 @@ llmism fix post.md --llm --in-place
 
 | Tier | Rules |
 |---|---|
-| lexical | `delve`, `tapestry`, `pivotal`, `leverage`, `seamless`, `boundaries`, `robust`, `load-bearing`, `honestly`, `crux`, Latinate fillers (`utilize`, `facilitate`, `prior to`, `in order to`, `approximately`), ... |
-| phrasal | "it's not X, it's Y", "not only X but also Y", `-ing` tail clauses, vague attributions ("studies suggest"), cataloguing lead-ins ("uses several mechanisms... These methods..."), empty pivots ("it's worth noting"), significance inflation ("stands as a testament to"), `Furthermore`/`Moreover`, depth-signalling ("at a more fundamental level"), announcing labels ("the key insight is"), nominalisations ("makes a determination"), engagement bait ("let me know if"), ... |
-| structural | em-dash overuse (per paragraph), transition-word clusters, sentence-opener repetition, hedge stacking, ≥3 bullets with `**bold**` lead-ins, self-answered rhetorical questions, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition, colon-hinged sentences, verbless fragments used as sentences, headers written as sentences |
+| lexical | `genuine`, `merely`, `leverage`, `underscores`, `elevate`, `robust`, `load-bearing`, `boundaries`, `honestly`, `sufficient`, `terminate`, `approximately` |
+| phrasal | "it's not X, it's Y", `rather than`, `in addition`, `-ing` tail clauses, colon reveals ("here's the thing"), depth-signalling ("at a more fundamental level"), announcing labels ("the key insight is"), engagement bait ("let me know if") |
+| structural | colon-hinged sentences, ≥3 bullets with `**bold**` lead-ins, verbless fragments used as sentences, headers written as sentences, em-dash overuse (per paragraph), sentence-opener repetition, hedge stacking, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition |
+
+The rule set is pruned to what actually fires: every rule here hit at least 10
+times over ~15k assistant turns (1.7M words) of Claude Code sessions. Rules that
+never paid for their scan time (`delve`, `tapestry`, `furthermore`, `utilize`,
+self-answered rhetorical questions, transition clusters, ...) live in git history.
 
 Pattern data lives in `llmism/data/patterns.yaml` — extend the list without
 touching code. Code fences (Markdown) and math environments, verbatim blocks and

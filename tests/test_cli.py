@@ -13,9 +13,9 @@ def sample_md(tmp_path: Path) -> Path:
     p = tmp_path / "sample.md"
     p.write_text(
         "# Notes\n\n"
-        "We delve into the data and leverage the tool.\n\n"
+        "We leverage the data and elevate the tool.\n\n"
         "It's not a bug, it's a feature.\n\n"
-        "```python\nprint('delve')\n```\n",
+        "```python\nprint('leverage')\n```\n",
         encoding="utf-8",
     )
     return p
@@ -25,7 +25,7 @@ class TestDetect:
     def test_table_output(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["detect", str(sample_md)])
         out = capsys.readouterr().out
-        assert "delve" in out and "its-not-x-its-y" in out
+        assert "leverage" in out and "its-not-x-its-y" in out
         assert "lexical" in out
         assert "print" not in out  # code fence skipped
         assert rc == 1
@@ -33,7 +33,7 @@ class TestDetect:
     def test_json_output(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         main(["detect", str(sample_md), "--json"])
         payload = json.loads(capsys.readouterr().out)
-        assert any(f["rule"] == "delve" for f in payload)
+        assert any(f["rule"] == "leverage-verb" for f in payload)
         assert all("start" in f and "category" in f for f in payload)
 
     def test_stdin(
@@ -41,9 +41,9 @@ class TestDetect:
     ) -> None:
         import io
 
-        monkeypatch.setattr("sys.stdin", io.StringIO("We delve."))
+        monkeypatch.setattr("sys.stdin", io.StringIO("We leverage."))
         main(["detect", "-"])
-        assert "delve" in capsys.readouterr().out
+        assert "leverage" in capsys.readouterr().out
 
     def test_clean_file_returns_zero(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -59,7 +59,7 @@ class TestDetect:
     ) -> None:
         import io
 
-        monkeypatch.setattr("sys.stdin", io.StringIO("a `delve` b"))
+        monkeypatch.setattr("sys.stdin", io.StringIO("a `leverage` b"))
         rc = main(["detect", "-", "--format", "markdown"])
         assert rc == 0
         assert "no LLMisms" in capsys.readouterr().out
@@ -69,7 +69,7 @@ class TestDetect:
     ) -> None:
         p = tmp_path / "doc.tex"
         p.write_text(
-            "text\n\\begin{equation}\ndelve=1\n\\end{equation}\n",
+            "text\n\\begin{equation}\nleverage=1\n\\end{equation}\n",
             encoding="utf-8",
         )
         rc = main(["detect", str(p)])
@@ -80,24 +80,23 @@ class TestFix:
     def test_stdout_rewrite(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["fix", str(sample_md)])
         out = capsys.readouterr().out
-        assert "explore" in out
-        assert "We explore into the data" in out  # prose rewritten
-        assert "print('delve')" in out  # code fence untouched
+        assert "We use the data" in out  # prose rewritten
+        assert "print('leverage')" in out  # code fence untouched
         assert "It's not a bug" in out  # flag-only pattern kept
         assert rc == 1  # remaining manual findings
 
     def test_json_fix(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         main(["fix", str(sample_md), "--json"])
         payload = json.loads(capsys.readouterr().out)
-        assert any(f["rule"] == "delve" for f in payload["fixed"])
+        assert any(f["rule"] == "leverage-verb" for f in payload["fixed"])
         assert any(f["rule"] == "its-not-x-its-y" for f in payload["remaining"])
-        assert "explore" in payload["text"]
+        assert "We use the data" in payload["text"]
 
     def test_in_place(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         main(["fix", str(sample_md), "--in-place"])
         content = sample_md.read_text(encoding="utf-8")
-        assert "We explore into the data" in content
-        assert "print('delve')" in content  # code fence untouched
+        assert "We use the data" in content
+        assert "print('leverage')" in content  # code fence untouched
 
     def test_clean_fix_exits_zero(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         p = tmp_path / "ok.md"
@@ -109,7 +108,9 @@ class TestFix:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         p = tmp_path / "q.md"
-        p.write_text("Why use it? The answer is that it helps.", encoding="utf-8")
+        p.write_text(
+            "- **Speed:** fast.\n- **Cost:** cheap.\n- **Scale:** easy.\n", encoding="utf-8"
+        )
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         rc = main(["fix", str(p), "--llm", "--json"])
         payload = json.loads(capsys.readouterr().out)

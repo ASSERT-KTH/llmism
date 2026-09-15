@@ -2,10 +2,11 @@
 # category: lexical | phrasal
 # pattern: regex, applied case-insensitively
 # suggestion: safe deterministic replacement; null = flag only, no auto-fix
-- id: delve
-  category: lexical
-  pattern: '\bdelv(?:e|es|ed|ing)\b'
-  suggestion: "explore"
+#
+# Pruned to rules that fired at least 10 times over ~15k assistant turns of
+# Claude Code sessions (1.7M words). Rarer patterns (delve, tapestry, moreover,
+# utilize, ...) cost scan time without earning hits; recover them from git
+# history if a corpus needs them.
 - id: genuine
   category: lexical
   pattern: '\bgenuine(?:ly)?\b'
@@ -14,18 +15,6 @@
   category: lexical
   pattern: '\bmerely\b'
   suggestion: null
-- id: tapestry
-  category: lexical
-  pattern: '\btapestr(?:y|ies)\b'
-  suggestion: "mix"
-- id: navigate-complexities
-  category: lexical
-  pattern: '\bnavigat(?:e|es|ed|ing) the complexit(?:y|ies)\b'
-  suggestion: "deal with the difficulty"
-- id: pivotal
-  category: lexical
-  pattern: '\bpivotal\b'
-  suggestion: "crucial"
 - id: leverage-verb
   category: lexical
   pattern: '\bleverag(?:e|es|ed|ing)\b'
@@ -38,26 +27,6 @@
   category: lexical
   pattern: '\belevat(?:e|es|ed|ing)\b'
   suggestion: "improve"
-- id: testament
-  category: lexical
-  pattern: '\ba testament to\b'
-  suggestion: "proof of"
-- id: fostering
-  category: lexical
-  pattern: '\bfoster(?:s|ed|ing)?\b'
-  suggestion: "encourage"
-- id: realm
-  category: lexical
-  pattern: '\b(?:the|a) realm of\b'
-  suggestion: "the area of"
-- id: holistic
-  category: lexical
-  pattern: '\bholistic\b'
-  suggestion: "complete"
-- id: seamless
-  category: lexical
-  pattern: '\bseamless(?:ly)?\b'
-  suggestion: "smooth"
 - id: robust
   category: lexical
   pattern: '\brobust\b'
@@ -66,173 +35,14 @@
   category: lexical
   pattern: '\bload[- ]bearing\b'
   suggestion: "essential"
-- id: unlock-potential
-  category: lexical
-  pattern: '\bunlock (?:\w+ )?potential\b'
-  suggestion: "make the most of it"
 - id: boundaries
   category: lexical
   pattern: '\bboundaries\b'
   suggestion: "limits"
-- id: embark-journey
-  category: lexical
-  pattern: '\bembark(?:s|ed|ing)? on (?:a|an|the) (?:\w+ )?journey\b'
-  suggestion: "start"
-- id: game-changer
-  category: lexical
-  pattern: '\bgame[- ]chang(?:e|es|ed|er|ers|ing)\b'
-  suggestion: "big improvement"
-- id: cutting-edge
-  category: lexical
-  pattern: '\bcutting-edge\b'
-  suggestion: "advanced"
-- id: in-conclusion
-  category: phrasal
-  pattern: '\bin conclusion\b'
-  suggestion: "to sum up"
-- id: furthermore
-  category: phrasal
-  pattern: '\bfurthermore\b'
-  suggestion: "also"
-- id: moreover
-  category: phrasal
-  pattern: '\bmoreover\b'
-  suggestion: "besides"
-- id: in-addition
-  category: phrasal
-  pattern: '\bin addition\b'
-  suggestion: "also"
-- id: it-is-worth-noting
-  category: phrasal
-  pattern: "\bit'?s worth noting that\b"
-  suggestion: "note that"
-- id: it-is-important-to-note
-  category: phrasal
-  pattern: "\bit'?s important to note that\b"
-  suggestion: "note that"
-- id: plays-a-crucial-role
-  category: phrasal
-  pattern: '\bplays? a (?:crucial|vital|key|significant) role\b'
-  suggestion: "matters"
-- id: its-not-x-its-y
-  category: phrasal
-  pattern: "it'?s not [^,.;:!?]{1,60},? ?it'?s "
-  suggestion: null
-- id: not-only-but-also
-  category: phrasal
-  pattern: '\bnot only\b[^.;:!?]{1,80}\bbut also\b'
-  suggestion: null
-- id: more-than-just
-  category: phrasal
-  pattern: '\bmore than just\b'
-  suggestion: null
-- id: rather-than
-  category: phrasal
-  pattern: '\brather than\b'
-  suggestion: null
-- id: whether-x-or-y-depends
-  category: phrasal
-  pattern: '\bwhether [^.;:!?]{1,60} (?:or not )?depends\b'
-  suggestion: null
-- id: has-benefits-carries-risks
-  category: phrasal
-  pattern: '\bwhile [^.;:!?]{1,80} (?:has|offer)s? (?:some )?benefits,? it also carries? (?:some )?risks\b'
-  suggestion: null
-- id: in-todays-fast-paced
-  category: phrasal
-  pattern: "\\bin today'?s fast-paced \\w+"
-  suggestion: null
-- id: ing-tail
-  category: phrasal
-  pattern: ',\s+(?:highlighting|reflecting|symbolizing|emphasizing|underscoring|showcasing|fostering|cultivating|signaling|demonstrating|illustrating|representing|suggesting|reinforcing|leveraging|aligning|embodying|exemplifying|epitomizing)\b'
-  suggestion: null
-- id: vague-attribution
-  category: phrasal
-  pattern: '\b(?:experts (?:argue|believe|say|claim|note|suggest)|industry (?:reports|observers|analysts)|observers have (?:cited|noted)|some critics argue|researchers have found|studies suggest|it is widely believed)\b'
-  suggestion: null
-- id: catalog-leadin
-  category: phrasal
-  pattern: '\b(?:used|uses|employs?|employed|relied? on|utilizes?)\s+(?:several|various|a number of|multiple|different|many|numerous)\s+\w+'
-  suggestion: null
-- id: catalog-pivot
-  category: phrasal
-  pattern: '\bThese\s+(?:\w+\s+)?(?:provide|offer|give|reveal|show|allow|enable|help)'
-  suggestion: null
-- id: empty-pivot
-  category: phrasal
-  pattern: "\\bIt(?:'?s| is) (?:worth noting|worth mentioning|worth pointing out|interesting to note|important to note|important to remember)(?: that)?\\b"
-  suggestion: null
-- id: simple-yet
-  category: phrasal
-  pattern: '\bsimple yet (?:effective|powerful|profound|elegant|transformative)\b'
-  suggestion: null
-- id: colon-reveal
-  category: phrasal
-  pattern: "(?:Here'?s the thing|Make no mistake|The truth is|Let'?s be honest|At the end of the day|The bottom line is|At its core|Fundamentally)\\b[,:]?"
-  suggestion: null
-- id: significance-inflation
-  category: phrasal
-  pattern: '\b(?:stands? as a testament to|serves? as a testament to|marked a turning point|setting the stage for|reshaping our understanding of|paving the way for|raising questions about|sparking debate about)\b'
-  suggestion: null
-- id: look-no-further
-  category: phrasal
-  pattern: '\blook no further\b'
-  suggestion: null
-- id: the-key-takeaway
-  category: phrasal
-  pattern: '\bthe key takeaway is\b'
-  suggestion: "in short"
-
-# Rules imported from the claude-style-patch STYLE.md house-style guide
-# (https://github.com/andrewroxby/claude-style-patch).
 - id: honestly
   category: lexical
   pattern: '\bhonestly\b'
   suggestion: null
-- id: crux
-  category: lexical
-  pattern: '\bcrux\b'
-  suggestion: "core"
-- id: utilize
-  category: lexical
-  pattern: '\butiliz(?:e|es|ed|ing)\b'
-  suggestion: "use"
-- id: facilitate
-  category: lexical
-  pattern: '\bfacilitat(?:e|es|ed|ing)\b'
-  suggestion: "help"
-- id: commence
-  category: lexical
-  pattern: '\bcommenc(?:e|es|ed|ing)\b'
-  suggestion: "start"
-- id: ascertain
-  category: lexical
-  pattern: '\bascertain(?:s|ed|ing)?\b'
-  suggestion: "find out"
-- id: endeavour
-  category: lexical
-  pattern: '\bendeavou?r(?:s|ed|ing)?\b'
-  suggestion: "try"
-- id: prior-to
-  category: lexical
-  pattern: '\bprior to\b'
-  suggestion: "before"
-- id: subsequent-to
-  category: lexical
-  pattern: '\bsubsequent to\b'
-  suggestion: "after"
-- id: in-order-to
-  category: lexical
-  pattern: '\bin order to\b'
-  suggestion: "to"
-- id: numerous
-  category: lexical
-  pattern: '\bnumerous\b'
-  suggestion: "many"
-- id: myriad
-  category: lexical
-  pattern: '\ba myriad of\b'
-  suggestion: "many"
 - id: sufficient
   category: lexical
   pattern: '\bsufficient\b'
@@ -245,9 +55,25 @@
   category: lexical
   pattern: '\bapproximately\b'
   suggestion: "about"
-- id: multifaceted
-  category: lexical
-  pattern: '\bmultifaceted\b'
+- id: in-addition
+  category: phrasal
+  pattern: '\bin addition\b'
+  suggestion: "also"
+- id: its-not-x-its-y
+  category: phrasal
+  pattern: "it'?s not [^,.;:!?]{1,60},? ?it'?s "
+  suggestion: null
+- id: rather-than
+  category: phrasal
+  pattern: '\brather than\b'
+  suggestion: null
+- id: ing-tail
+  category: phrasal
+  pattern: ',\s+(?:highlighting|reflecting|symbolizing|emphasizing|underscoring|showcasing|fostering|cultivating|signaling|demonstrating|illustrating|representing|suggesting|reinforcing|leveraging|aligning|embodying|exemplifying|epitomizing)\b'
+  suggestion: null
+- id: colon-reveal
+  category: phrasal
+  pattern: "(?:Here'?s the thing|Make no mistake|The truth is|Let'?s be honest|At the end of the day|The bottom line is|At its core|Fundamentally)\\b[,:]?"
   suggestion: null
 - id: depth-signaling
   category: phrasal
@@ -257,26 +83,6 @@
   category: phrasal
   pattern: "\\b(?:the key insight (?:here )?is|the important (?:thing|part)(?: here)? is|here'?s what matters|what'?s worth noting|the thing to (?:notice|understand|see) is|the point (?:here )?is this)\\b"
   suggestion: null
-- id: nominalization-of
-  category: phrasal
-  pattern: '\bthe (?:implementation|utilization|determination|realization|consideration|application|examination|facilitation|optimization|prioritization) of\b'
-  suggestion: null
-- id: make-a-determination
-  category: phrasal
-  pattern: '\bmakes? a determination\b'
-  suggestion: "decide"
-- id: provide-an-explanation
-  category: phrasal
-  pattern: '\bprovides? an explanation\b'
-  suggestion: "explain"
-- id: perform-an-analysis
-  category: phrasal
-  pattern: '\b(?:performs?|conducts?) an analysis\b'
-  suggestion: "analyse"
-- id: conduct-an-investigation
-  category: phrasal
-  pattern: '\bconducts? an investigation\b'
-  suggestion: "investigate"
 - id: engagement-bait
   category: phrasal
   pattern: "\\b(?:let me know if|hope (?:this|that) helps|would you like me to|what do you think\\?|feel free to (?:ask|reach out))"

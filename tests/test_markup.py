@@ -14,7 +14,7 @@ from llmism._patterns import compiled_patterns, load_patterns
 class TestPatternsData:
     def test_seed_list_is_curated_size(self) -> None:
         pats = load_patterns()
-        assert 20 <= len(pats) <= 100
+        assert 15 <= len(pats) <= 40
 
     def test_unique_ids_and_valid_categories(self) -> None:
         pats = load_patterns()
@@ -41,16 +41,16 @@ class TestScannableRanges:
         assert "before" in covered and "after" in covered
 
     def test_unterminated_fence_excluded_to_end(self) -> None:
-        text = "intro\n```\ndelve\n"
+        text = "intro\n```\nleverage\n"
         ranges = scannable_ranges(text, "markdown")
         covered = "".join(text[s.start : s.end] for s in ranges)
-        assert "delve" not in covered
+        assert "leverage" not in covered
 
     def test_inline_code_excluded(self) -> None:
-        text = "a `delve` b"
+        text = "a `leverage` b"
         ranges = scannable_ranges(text, "markdown")
         covered = "".join(text[s.start : s.end] for s in ranges)
-        assert "delve" not in covered
+        assert "leverage" not in covered
 
     def test_latex_excludes_equation(self) -> None:
         text = "text\n\\begin{equation}\nx=1\n\\end{equation}\nmore"
@@ -110,12 +110,12 @@ class TestBoldLeadInBullets:
 @pytest.mark.parametrize(
     ("word", "expected"),
     [
-        ("delve", "delve"),
-        ("delving", "delving"),
-        ("delved", "delved"),
+        ("leverage", "leverage"),
+        ("leveraging", "leveraging"),
+        ("leveraged", "leveraged"),
         ("boundaries", "boundaries"),
-        ("Furthermore,", "Furthermore"),
-        ("moreover", "moreover"),
+        ("Honestly,", "Honestly"),
+        ("robust", "robust"),
     ],
 )
 def test_seed_patterns_fire(word: str, expected: str) -> None:
@@ -130,22 +130,22 @@ def test_seed_patterns_fire(word: str, expected: str) -> None:
 
 class TestLatexComments:
     def test_comment_lines_excluded(self) -> None:
-        text = "% delve into boundaries\nclean line\n"
+        text = "% leverage into boundaries\nclean line\n"
         covered = "".join(text[s.start : s.end] for s in scannable_ranges(text, "latex"))
-        assert "delve" not in covered
+        assert "leverage" not in covered
         assert "clean line" in covered
 
     def test_trailing_comment_excluded(self) -> None:
-        text = "clean % delve trailing\nnext"
+        text = "clean % leverage trailing\nnext"
         covered = "".join(text[s.start : s.end] for s in scannable_ranges(text, "latex"))
-        assert "delve" not in covered
+        assert "leverage" not in covered
         assert "clean" in covered and "next" in covered
 
     def test_escaped_percent_kept(self) -> None:
-        text = "50\\% accuracy % delve\n"
+        text = "50\\% accuracy % leverage\n"
         covered = "".join(text[s.start : s.end] for s in scannable_ranges(text, "latex"))
         assert "50\\%" in covered
-        assert "delve" not in covered
+        assert "leverage" not in covered
 
 
 class TestSplitParagraphs:
