@@ -182,3 +182,102 @@
   category: phrasal
   pattern: '\bthe key takeaway is\b'
   suggestion: "in short"
+
+# Rules imported from the claude-style-patch STYLE.md house-style guide
+# (https://github.com/andrewroxby/claude-style-patch).
+- id: honestly
+  category: lexical
+  pattern: '\bhonestly\b'
+  suggestion: null
+- id: crux
+  category: lexical
+  pattern: '\bcrux\b'
+  suggestion: "core"
+- id: utilize
+  category: lexical
+  pattern: '\butiliz(?:e|es|ed|ing)\b'
+  suggestion: "use"
+- id: facilitate
+  category: lexical
+  pattern: '\bfacilitat(?:e|es|ed|ing)\b'
+  suggestion: "help"
+- id: commence
+  category: lexical
+  pattern: '\bcommenc(?:e|es|ed|ing)\b'
+  suggestion: "start"
+- id: ascertain
+  category: lexical
+  pattern: '\bascertain(?:s|ed|ing)?\b'
+  suggestion: "find out"
+- id: endeavour
+  category: lexical
+  pattern: '\bendeavou?r(?:s|ed|ing)?\b'
+  suggestion: "try"
+- id: prior-to
+  category: lexical
+  pattern: '\bprior to\b'
+  suggestion: "before"
+- id: subsequent-to
+  category: lexical
+  pattern: '\bsubsequent to\b'
+  suggestion: "after"
+- id: in-order-to
+  category: lexical
+  pattern: '\bin order to\b'
+  suggestion: "to"
+- id: numerous
+  category: lexical
+  pattern: '\bnumerous\b'
+  suggestion: "many"
+- id: myriad
+  category: lexical
+  pattern: '\ba myriad of\b'
+  suggestion: "many"
+- id: sufficient
+  category: lexical
+  pattern: '\bsufficient\b'
+  suggestion: "enough"
+- id: terminate
+  category: lexical
+  pattern: '\bterminat(?:e|es|ed|ing)\b'
+  suggestion: "end"
+- id: approximately
+  category: lexical
+  pattern: '\bapproximately\b'
+  suggestion: "about"
+- id: multifaceted
+  category: lexical
+  pattern: '\bmultifaceted\b'
+  suggestion: null
+- id: depth-signaling
+  category: phrasal
+  pattern: '\b(?:at a (?:more )?(?:fundamental|deeper|basic) level|on a deeper level|the real (?:issue|question|problem|point)(?: here)? (?:is|underneath)|what(?:'')?s really going on|beneath the surface|the deeper truth)\b'
+  suggestion: null
+- id: announcing-label
+  category: phrasal
+  pattern: "\\b(?:the key insight (?:here )?is|the important (?:thing|part)(?: here)? is|here'?s what matters|what'?s worth noting|the thing to (?:notice|understand|see) is|the point (?:here )?is this)\\b"
+  suggestion: null
+- id: nominalization-of
+  category: phrasal
+  pattern: '\bthe (?:implementation|utilization|determination|realization|consideration|application|examination|facilitation|optimization|prioritization) of\b'
+  suggestion: null
+- id: make-a-determination
+  category: phrasal
+  pattern: '\bmakes? a determination\b'
+  suggestion: "decide"
+- id: provide-an-explanation
+  category: phrasal
+  pattern: '\bprovides? an explanation\b'
+  suggestion: "explain"
+- id: perform-an-analysis
+  category: phrasal
+  pattern: '\b(?:performs?|conducts?) an analysis\b'
+  suggestion: "analyse"
+- id: conduct-an-investigation
+  category: phrasal
+  pattern: '\bconducts? an investigation\b'
+  suggestion: "investigate"
+- id: engagement-bait
+  category: phrasal
+  pattern: "\\b(?:let me know if|hope (?:this|that) helps|would you like me to|what do you think\\?|feel free to (?:ask|reach out))"
+  suggestion: null

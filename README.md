@@ -51,15 +51,18 @@ llmism fix post.md --llm --in-place
 
 | Tier | Rules |
 |---|---|
-| lexical | `delve`, `tapestry`, `pivotal`, `leverage`, `seamless`, `boundaries`, `robust`, `load-bearing`, ... |
-| phrasal | "it's not X, it's Y", "not only X but also Y", `-ing` tail clauses, vague attributions ("studies suggest"), cataloguing lead-ins ("uses several mechanisms... These methods..."), empty pivots ("it's worth noting"), significance inflation ("stands as a testament to"), `Furthermore`/`Moreover`, ... |
-| structural | em-dash overuse (per paragraph), transition-word clusters, sentence-opener repetition, hedge stacking, ≥3 bullets with `**bold**` lead-ins, self-answered rhetorical questions, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition |
+| lexical | `delve`, `tapestry`, `pivotal`, `leverage`, `seamless`, `boundaries`, `robust`, `load-bearing`, `honestly`, `crux`, Latinate fillers (`utilize`, `facilitate`, `prior to`, `in order to`, `approximately`), ... |
+| phrasal | "it's not X, it's Y", "not only X but also Y", `-ing` tail clauses, vague attributions ("studies suggest"), cataloguing lead-ins ("uses several mechanisms... These methods..."), empty pivots ("it's worth noting"), significance inflation ("stands as a testament to"), `Furthermore`/`Moreover`, depth-signalling ("at a more fundamental level"), announcing labels ("the key insight is"), nominalisations ("makes a determination"), engagement bait ("let me know if"), ... |
+| structural | em-dash overuse (per paragraph), transition-word clusters, sentence-opener repetition, hedge stacking, ≥3 bullets with `**bold**` lead-ins, self-answered rhetorical questions, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition, colon-hinged sentences, verbless fragments used as sentences, headers written as sentences |
 
 Pattern data lives in `llmism/data/patterns.yaml` — extend the list without
 touching code. Code fences (Markdown) and math environments, verbatim blocks and
 `%` comments (LaTeX) are never scanned or rewritten. Several structural rules are
 inspired by the [sloptrim](https://github.com/seyedehsanhadi/sloptrim) pattern
-catalogue.
+catalogue; the colon, fragment, header, depth-signalling and Anglo-Saxon-over-Latinate
+rules come from the
+[claude-style-patch](https://github.com/andrewroxby/claude-style-patch) house-style
+guide.
 
 ## Library use
 

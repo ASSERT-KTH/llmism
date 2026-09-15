@@ -54,6 +54,34 @@ _RQ_ANSWER_START = re.compile(
     r"^\s*(?:the answer is|yes[,.]|no[,.]|it is|that'?s because)\b", re.IGNORECASE
 )
 _SENT_END_Q = re.compile(r"\?\s*$")
+
+# colon-hinged sentences: a colon is only legitimate before a list of 3+ items
+COLON_LIST_MIN_ITEMS = 3
+COLON_LABEL_MAX_WORDS = 3  # shorter left sides are key-value specs, not clauses
+_COLON = re.compile(r":")
+_LIST_MARKER = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s*")
+_SKIP_LINE = re.compile(r"^\s*(?:#{1,6}\s|\||>\s|```)")
+_URL_COLON = re.compile(r"://|\bhttps?$|\bftp$|\bmailto$")
+_TIME_COLON = re.compile(r"\d$")
+
+# verbless fragments used as sentences ("Two things worth watching.")
+FRAGMENT_MAX_WORDS = 6
+_FRAGMENT_OPENER = re.compile(
+    r"^(?:the|a|an|one|two|three|four|another|no|same|other|both|this|that|these|those)\b",
+    re.IGNORECASE,
+)
+_FINITE_VERB = re.compile(
+    r"\b(?:is|are|was|were|be|been|being|am|has|have|had|do|does|did|can|could|"
+    r"will|would|shall|should|may|might|must|go|goes|get|gets|comes?|makes?|"
+    r"means?|needs?|says?|shows?|takes?|works?|\w+ed|"
+    r"found|made|said|told|took|went|came|saw|got|gave|ran|won|held|left|"
+    r"built|sent|kept|meant|felt|put|set|cut|read|led|shown|done|seen|known)\b",
+    re.IGNORECASE,
+)
+
+# headers are labels, not sentences
+HEADER_MAX_WORDS = 8
+_MD_HEADER = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 _REP_WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
 _SYNONYM_CLUSTERS = [
     ("protagonist", "main character", "central figure", "hero", "heroine"),
@@ -97,6 +125,9 @@ class Detector:
         findings.extend(self._scan_bold_lead_ins(text, fmt))
         findings.extend(self._scan_paragraph_rules(text, fmt))
         findings.extend(self._scan_rhetorical_questions(text, fmt))
+        findings.extend(self._scan_colon_clauses(text, ranges))
+        findings.extend(self._scan_verbless_fragments(text, fmt))
+        findings.extend(self._scan_sentence_headers(text, fmt))
         findings.extend(self._scan_burstiness(text, fmt))
         findings.extend(self._scan_paragraph_monotony(text, fmt))
         findings.extend(self._scan_cadence(text, fmt))
@@ -241,6 +272,105 @@ class Detector:
                     end=ae,
                     matched_text=text[qs:ae],
                     message="Rhetorical question immediately answered; restate directly",
+                )
+            )
+        return findings
+
+    # -- structural: colon-hinged sentences -------------------------------------
+    def _scan_colon_clauses(self, text: str, ranges: list[Span]) -> list[Finding]:
+        """A colon joining a label to a clause, outside a list of 3+ items."""
+        findings: list[Finding] = []
+        for m in _COLON.finditer(text):
+            pos = m.start()
+            if not any(s.start <= pos < s.end for s in ranges):
+                continue
+            line_start = text.rfind("\n", 0, pos) + 1
+            line_end = text.find("\n", pos)
+            line_end = len(text) if line_end == -1 else line_end
+            line = text[line_start:line_end]
+            if _SKIP_LINE.match(line):
+                continue
+            left = text[line_start:pos]
+            right = text[pos + 1 : line_end]
+            if _URL_COLON.search(left) or (_TIME_COLON.search(left) and right[:1].isdigit()):
+                continue
+            if not right.strip():  # label line, payload on the next line
+                continue
+            label = _LIST_MARKER.sub("", left)
+            if len(label.split()) <= COLON_LABEL_MAX_WORDS:
+                continue  # "Note: ..." style key-value spec, not a hinged sentence
+            clause = right.split(".")[0]
+            if clause.count(",") >= COLON_LIST_MIN_ITEMS - 1 or clause.count(";") >= 2:
+                continue  # literal list of three or more items
+            if len(clause.split()) < 3:
+                continue
+            findings.append(
+                Finding(
+                    category="structural",
+                    rule_id="colon-clause",
+                    start=pos,
+                    end=min(pos + 1 + len(right), line_end),
+                    matched_text=text[max(line_start, pos - 30) : min(line_end, pos + 30)],
+                    message=(
+                        "Colon hinges a label onto a clause; split into two sentences "
+                        "or join with because/so/but/and"
+                    ),
+                )
+            )
+        return findings
+
+    # -- structural: verbless fragments -----------------------------------------
+    def _scan_verbless_fragments(self, text: str, fmt: str) -> list[Finding]:
+        """Noun-phrase fragments standing in for sentences."""
+        findings: list[Finding] = []
+        for sent, start, end in split_sentences(text, fmt):
+            stripped = sent.strip()
+            if not stripped.endswith("."):
+                continue
+            words = stripped.rstrip(".").split()
+            if not 2 <= len(words) <= FRAGMENT_MAX_WORDS:
+                continue
+            if not _FRAGMENT_OPENER.match(stripped):
+                continue
+            if _FINITE_VERB.search(stripped):
+                continue
+            findings.append(
+                Finding(
+                    category="structural",
+                    rule_id="verbless-fragment",
+                    start=start,
+                    end=end,
+                    matched_text=stripped,
+                    message=(
+                        "Verbless fragment used as a sentence; fold it into the "
+                        "sentence it introduces"
+                    ),
+                )
+            )
+        return findings
+
+    # -- structural: headers ----------------------------------------------------
+    def _scan_sentence_headers(self, text: str, fmt: str) -> list[Finding]:
+        """Markdown headers written as sentences rather than labels."""
+        if fmt != "markdown":
+            return []
+        findings: list[Finding] = []
+        for m in _MD_HEADER.finditer(text):
+            title = m.group(2)
+            words = title.split()
+            too_long = len(words) > HEADER_MAX_WORDS
+            punctuated = title.endswith((".", "!", "?"))
+            if not (too_long or punctuated):
+                continue
+            reason = f"{len(words)} words" if too_long else f"ends with {title[-1]!r}"
+            findings.append(
+                Finding(
+                    category="structural",
+                    rule_id="sentence-header",
+                    start=m.start(2),
+                    end=m.end(2),
+                    matched_text=title,
+                    message=f"Header reads as a sentence ({reason}); headers are labels",
                 )
             )
         return findings

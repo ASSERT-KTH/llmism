@@ -14,7 +14,7 @@ from llmism._patterns import compiled_patterns, load_patterns
 class TestPatternsData:
     def test_seed_list_is_curated_size(self) -> None:
         pats = load_patterns()
-        assert 20 <= len(pats) <= 60
+        assert 20 <= len(pats) <= 100
 
     def test_unique_ids_and_valid_categories(self) -> None:
         pats = load_patterns()

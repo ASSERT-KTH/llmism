@@ -355,3 +355,44 @@ class TestNewPhrasalRules:
         assert [f.rule_id for f in detector.scan("a genuine gain", "text")] == ["genuine"]
         assert [f.rule_id for f in detector.scan("genuinely different", "text")] == ["genuine"]
         assert "genuine" not in [f.rule_id for f in detector.scan("ingenuous", "text")]
+
+    # -- rules imported from claude-style-patch STYLE.md ----------------------
+    def test_colon_clause(self, detector: Detector) -> None:
+        text = "The honest construction here: the parser never sees those bytes."
+        assert "colon-clause" in [f.rule_id for f in detector.scan(text, "text")]
+
+    def test_colon_clause_allows_lists_and_labels(self, detector: Detector) -> None:
+        listed = "It ships three parts: a detector, a remediator, and a CLI."
+        assert "colon-clause" not in [f.rule_id for f in detector.scan(listed, "text")]
+        label = "Note: the cache is rebuilt on every run."
+        assert "colon-clause" not in [f.rule_id for f in detector.scan(label, "text")]
+
+    def test_colon_clause_skips_urls_and_headings(self, detector: Detector) -> None:
+        text = "# Why this matters: a longer story\n\nSee https://example.org/a/b for details.\n"
+        assert "colon-clause" not in [f.rule_id for f in detector.scan(text)]
+
+    def test_verbless_fragment(self, detector: Detector) -> None:
+        text = "Two things worth watching. The first is whether it holds up."
+        assert "verbless-fragment" in [f.rule_id for f in detector.scan(text, "text")]
+
+    def test_verbless_fragment_ignores_real_sentences(self, detector: Detector) -> None:
+        text = "The parser is slow. One caution applied here."
+        assert "verbless-fragment" not in [f.rule_id for f in detector.scan(text, "text")]
+
+    def test_sentence_header(self, detector: Detector) -> None:
+        text = "# The parser rewrites offsets from right to left always.\n\nBody text here.\n"
+        rules = [f.rule_id for f in detector.scan(text)]
+        assert "sentence-header" in rules
+
+    def test_sentence_header_allows_labels(self, detector: Detector) -> None:
+        assert "sentence-header" not in [f.rule_id for f in detector.scan("## Installation\n\nx\n")]
+
+    def test_latinate_suggestions(self, detector: Detector) -> None:
+        (f,) = [f for f in detector.scan("We utilize it.", "text") if f.rule_id == "utilize"]
+        assert f.suggestion == "use"
+
+    def test_depth_signaling_and_announcing(self, detector: Detector) -> None:
+        rules = [f.rule_id for f in detector.scan("At a more fundamental level, x.", "text")]
+        assert "depth-signaling" in rules
+        rules = [f.rule_id for f in detector.scan("The key insight is that x.", "text")]
+        assert "announcing-label" in rules
