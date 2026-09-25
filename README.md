@@ -55,6 +55,12 @@ llmism fix post.md --llm --in-place
 | phrasal | "it's not X, it's Y", `rather than`, `in addition`, `-ing` tail clauses, colon reveals ("here's the thing"), depth-signalling ("at a more fundamental level"), announcing labels ("the key insight is"), engagement bait ("let me know if") |
 | structural | colon-hinged sentences, ≥3 bullets with `**bold**` lead-ins, verbless fragments used as sentences, headers written as sentences, em-dash overuse (per paragraph), sentence-opener repetition, hedge stacking, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition |
 
+Further rules flag chatbot openings, vague attributions, generic conclusions,
+inflated significance, unfilled placeholders, leaked citation markup, AI-tool URL
+parameters, and lines with six or more social hashtags. `in order to` and
+`due to the fact that` have deterministic fixes; claims and tool artifacts stay
+for review.
+
 The rule set is pruned to what actually fires: every rule here hit at least 10
 times over ~15k assistant turns (1.7M words) of Claude Code sessions. Rules that
 never paid for their scan time (`delve`, `tapestry`, `furthermore`, `utilize`,
@@ -67,7 +73,9 @@ inspired by the [sloptrim](https://github.com/seyedehsanhadi/sloptrim) pattern
 catalogue; the colon, fragment, header, depth-signalling and Anglo-Saxon-over-Latinate
 rules come from the
 [claude-style-patch](https://github.com/andrewroxby/claude-style-patch) house-style
-guide.
+guide. The newer artifact, attribution, conclusion, and hashtag rules draw on
+the [avoid-ai-writing](https://github.com/conorbronsdon/avoid-ai-writing)
+pattern catalog.
 
 ## Library use
 

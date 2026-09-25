@@ -75,6 +75,10 @@ _FINITE_VERB = re.compile(
 HEADER_MAX_WORDS = 8
 _MD_HEADER = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 _REP_WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
+# A trailing run of social tags, not ordinary Markdown headings or inline tags.
+_HASHTAG_RUN = re.compile(
+    r"(?:^|\n)([ \t]*(?:#[A-Za-z][\w-]*[ \t]+){5,}#[A-Za-z][\w-]*[ \t]*)(?=\n|\Z)"
+)
 _SYNONYM_CLUSTERS = [
     ("protagonist", "main character", "central figure", "hero", "heroine"),
     ("company", "firm", "organization", "enterprise", "business"),
@@ -124,7 +128,27 @@ class Detector:
         findings.extend(self._scan_cadence(text, fmt))
         findings.extend(self._scan_synonym_cycling(text, fmt))
         findings.extend(self._scan_degenerate_repetition(text, fmt))
+        findings.extend(self._scan_hashtag_stuffing(text, ranges))
         return sorted(findings, key=lambda f: (f.start, f.end))
+
+    def _scan_hashtag_stuffing(self, text: str, ranges: list[Span]) -> list[Finding]:
+        """Flag lines made of six or more social tags outside protected markup."""
+        findings: list[Finding] = []
+        for match in _HASHTAG_RUN.finditer(text):
+            start, end = match.span(1)
+            if not any(span.start <= start and end <= span.end for span in ranges):
+                continue
+            findings.append(
+                Finding(
+                    category="structural",
+                    rule_id="hashtag-stuffing",
+                    start=start,
+                    end=end,
+                    matched_text=text[start:end],
+                    message="Six or more tags in one line; keep only useful tags",
+                )
+            )
+        return findings
 
     # -- lexical + phrasal ---------------------------------------------------
     def _scan_patterns(self, text: str, ranges: list[Span]) -> list[Finding]:

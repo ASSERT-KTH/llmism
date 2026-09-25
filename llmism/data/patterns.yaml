@@ -7,6 +7,8 @@
 # Claude Code sessions (1.7M words). Rarer patterns (delve, tapestry, moreover,
 # utilize, ...) cost scan time without earning hits; recover them from git
 # history if a corpus needs them.
+# Additional high-specificity patterns adapted from avoid-ai-writing's catalog.
+# Context-dependent claims and artifacts are review-only, never rewritten blindly.
 - id: genuine
   category: lexical
   pattern: '\bgenuine(?:ly)?\b'
@@ -86,4 +88,44 @@
 - id: engagement-bait
   category: phrasal
   pattern: "\\b(?:let me know if|hope (?:this|that) helps|would you like me to|what do you think\\?|feel free to (?:ask|reach out))"
+  suggestion: null
+- id: chatbot-opener
+  category: phrasal
+  pattern: '(?:\A|(?<=\n))(?:Certainly|Absolutely|Great question|You''re absolutely right)![ \t]*'
+  suggestion: null
+- id: vague-attribution
+  category: phrasal
+  pattern: '\b(?:experts (?:believe|say|agree)|studies (?:show|suggest|indicate)|research (?:shows|suggests))\b'
+  suggestion: null
+- id: generic-conclusion
+  category: phrasal
+  pattern: '\b(?:the future looks bright|only time will tell|in conclusion|to sum up)\b'
+  suggestion: null
+- id: significance-inflation
+  category: phrasal
+  pattern: '\b(?:watershed moment|marking a pivotal moment|paradigm shift|game[- ]changer)\b'
+  suggestion: null
+- id: in-order-to
+  category: phrasal
+  pattern: '\bin order to\b'
+  suggestion: 'to'
+- id: due-to-the-fact-that
+  category: phrasal
+  pattern: '\bdue to the fact that\b'
+  suggestion: 'because'
+- id: serves-as
+  category: phrasal
+  pattern: '\bserves as\b'
+  suggestion: null
+- id: unfilled-placeholder
+  category: phrasal
+  pattern: '\[(?:your (?:name|email|company|title)|insert (?:source|name|date|link|citation)|tbd)\]|\b\d{4}-XX-XX\b'
+  suggestion: null
+- id: chatbot-citation-markup
+  category: phrasal
+  pattern: '(?:\bciteturn\d+(?:search|view|fetch)\d+\b|\boai_citation\b|\bcontentReference\[oaicite:\d+\])'
+  suggestion: null
+- id: ai-tool-url-parameter
+  category: phrasal
+  pattern: '\butm_source=(?:chatgpt\.com|copilot\.com)\b'
   suggestion: null

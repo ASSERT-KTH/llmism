@@ -55,6 +55,13 @@ class TestDeterministic:
         assert result.text == text
         assert [f.rule_id for f in result.remaining] == ["rather-than"]
 
+    def test_clarity_fixes_preserve_review_only_claim(self, remediator: Remediator) -> None:
+        text = "In order to win, experts believe we stopped due to the fact that it rained."
+        result = remediator.fix(text, Detector().scan(text, "text"))
+        assert result.text == "To win, experts believe we stopped because it rained."
+        assert {f.rule_id for f in result.fixed} == {"in-order-to", "due-to-the-fact-that"}
+        assert [f.rule_id for f in result.remaining] == ["vague-attribution"]
+
     def test_structural_left_untouched_without_llm(self, remediator: Remediator) -> None:
         text = (
             "This is a long paragraph about style and its problems — mostly habit — "

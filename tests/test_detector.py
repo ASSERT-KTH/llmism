@@ -340,3 +340,60 @@ class TestNewPhrasalRules:
     def test_sentence_header_skips_code_fences(self, detector: Detector) -> None:
         text = "```sh\n# 2. the real test is to swap the cable and retry\nls\n```\n"
         assert "sentence-header" not in [f.rule_id for f in detector.scan(text)]
+
+
+class TestAvoidAiWritingPatterns:
+    @pytest.mark.parametrize(
+        ("text", "rule_id"),
+        [
+            ("Certainly! Here is the report.", "chatbot-opener"),
+            ("Experts believe it will work.", "vague-attribution"),
+            ("Only time will tell.", "generic-conclusion"),
+            ("This marks a watershed moment.", "significance-inflation"),
+            ("Sign it [Your Name].", "unfilled-placeholder"),
+            ("Filed on 2025-XX-XX.", "unfilled-placeholder"),
+            ("See citeturn0search0.", "chatbot-citation-markup"),
+            ("See contentReference[oaicite:0].", "chatbot-citation-markup"),
+            ("Visit https://example.com/?utm_source=chatgpt.com", "ai-tool-url-parameter"),
+            ("The log serves as evidence.", "serves-as"),
+        ],
+    )
+    def test_new_patterns(self, detector: Detector, text: str, rule_id: str) -> None:
+        matches = [f for f in detector.scan(text, "text") if f.rule_id == rule_id]
+        assert len(matches) == 1
+        assert text[matches[0].start : matches[0].end] == matches[0].matched_text
+        assert matches[0].suggestion is None
+
+    @pytest.mark.parametrize(
+        ("text", "rule_id", "suggestion"),
+        [
+            ("In order to start, press enter.", "in-order-to", "to"),
+            ("We stopped due to the fact that it rained.", "due-to-the-fact-that", "because"),
+        ],
+    )
+    def test_safe_clarity_fixes(
+        self, detector: Detector, text: str, rule_id: str, suggestion: str
+    ) -> None:
+        (finding,) = [f for f in detector.scan(text, "text") if f.rule_id == rule_id]
+        assert finding.suggestion == suggestion
+
+    def test_chatbot_opener_only_at_start_of_line(self, detector: Detector) -> None:
+        assert "chatbot-opener" not in [
+            f.rule_id for f in detector.scan("She said, 'Absolutely!' and left.", "text")
+        ]
+
+    def test_protected_markup_is_not_flagged(self, detector: Detector) -> None:
+        text = (
+            "```text\nCertainly! [Your Name] citeturn0search0\n"
+            "#One #Two #Three #Four #Five #Six\n```"
+        )
+        assert detector.scan(text, "markdown") == []
+
+    def test_hashtag_stuffing(self, detector: Detector) -> None:
+        text = "A post.\n#One #Two #Three #Four #Five #Six\n"
+        (finding,) = [f for f in detector.scan(text, "markdown") if f.rule_id == "hashtag-stuffing"]
+        assert finding.matched_text.strip() == "#One #Two #Three #Four #Five #Six"
+
+    def test_five_hashtags_and_headings_are_allowed(self, detector: Detector) -> None:
+        text = "# A heading with six ordinary words here\n#One #Two #Three #Four #Five\n"
+        assert "hashtag-stuffing" not in [f.rule_id for f in detector.scan(text)]
