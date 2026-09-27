@@ -19,6 +19,22 @@ llmism detect - --format markdown < draft.txt
 llmism detect post.md --human    # console table for humans
 ```
 
+### Directory input
+
+`path` can be a directory; the tree is walked recursively (`.git`,
+`node_modules`, build dirs, ... are skipped) for scannable extensions
+(`.md`, `.markdown`, `.tex`, `.txt`), with per-file reporting:
+
+```sh
+llmism detect docs/              # JSON array across all files, exit 1 if any
+llmism detect docs/ --human      # one table per file + a summary line
+llmism detect . --format markdown   # restrict the walk to .md/.markdown
+```
+
+JSON output is a flat findings list where every entry carries its own
+`path`; `fix --diff` concatenates one unified diff per changed file, so
+`llmism fix docs/ --diff | git apply -` works on the whole tree.
+
 ### Per-rule configuration
 
 A `.llmism.toml` in the working directory (override with `--config`)
@@ -61,7 +77,12 @@ llmism fix post.md --human            # rewritten text on stdout
 llmism fix post.md --diff             # unified diff of the rewrite — review it
 llmism fix post.md --llm --diff       # diff the LLM's rewrite before accepting
 llmism fix post.md --in-place         # rewrite the file
+llmism fix docs/ --diff               # whole-tree diff, pipe into git apply
+llmism fix docs/ --in-place           # rewrite every scannable file in docs/
 ```
+
+Fixing a directory requires `--in-place` or `--diff` (dumping several
+rewritten files to stdout would be useless).
 
 - **Lexical/phrasal findings with a safe replacement** are rewritten
   deterministically (capitalisation preserved, offsets applied right-to-left).

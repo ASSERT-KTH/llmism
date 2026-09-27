@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ._config import Config, ConfigError, load_config
+from ._targets import expand_targets
 from .detector import Detector, Finding
 from .remediator import Remediator
 
@@ -39,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_common(p: argparse.ArgumentParser) -> None:
-        p.add_argument("path", help="file to process, or '-' for stdin")
+        p.add_argument("path", help="file, directory, or '-' for stdin")
         p.add_argument(
             "--format",
             choices=_FORMATS,
@@ -151,14 +152,30 @@ def _load_config_or_exit(path: str) -> Config:
 
 def cmd_detect(args: argparse.Namespace) -> int:
     config = _load_config_or_exit(args.config)
-    text = _read(args.path)
-    fmt = args.format or _guess_format(args.path)
-    findings = Detector(config=config).scan(text, fmt)
+    targets = expand_targets(args.path, args.format)
+    detector = Detector(config=config)
+    all_findings: list[tuple[str, str, list[Finding]]] = []
+    for target in targets:
+        text = _read(target)
+        fmt = args.format or _guess_format(target)
+        all_findings.append((target, text, detector.scan(text, fmt)))
+
     if args.json:
-        print(json.dumps(_findings_payload(findings, args.path), indent=2))
+        payload: list[dict[str, object]] = []
+        for target, _, findings in all_findings:
+            payload.extend(_findings_payload(findings, target))
+        print(json.dumps(payload, indent=2))
     else:
-        _print_findings(findings, text, args.path)
-    return 1 if findings else 0
+        total = 0
+        for target, text, findings in all_findings:
+            if findings:
+                _print_findings(findings, text, target)
+                total += len(findings)
+        if len(targets) > 1:
+            print(f"\n{total} finding(s) in {len(targets)} file(s)")
+        elif not total:
+            print(f"{targets[0] if targets else args.path}: no LLMisms detected")
+    return 1 if any(f for _, _, f in all_findings) else 0
 
 
 def _unified_diff(original: str, rewritten: str, path: str) -> str:
@@ -175,33 +192,48 @@ def _unified_diff(original: str, rewritten: str, path: str) -> str:
 
 def cmd_fix(args: argparse.Namespace) -> int:
     config = _load_config_or_exit(args.config)
-    text = _read(args.path)
-    fmt = args.format or _guess_format(args.path)
-    findings = Detector(config=config).scan(text, fmt)
+    if Path(args.path).is_dir() and not (args.in_place or args.diff):
+        print(
+            "error: --in-place (or --diff to review) is required when fixing a directory",
+            file=sys.stderr,
+        )
+        return 2
+    targets = expand_targets(args.path, args.format)
+    detector = Detector(config=config)
+    rc = 0
+    for target in targets:
+        rc = max(rc, _fix_one(args, target, detector))
+    return rc
+
+
+def _fix_one(args: argparse.Namespace, target: str, detector: Detector) -> int:
+    text = _read(target)
+    fmt = args.format or _guess_format(target)
+    findings = detector.scan(text, fmt)
     result = Remediator().fix(text, findings, use_llm=args.llm)
     for e in result.errors:
         print(f"error: {e}", file=sys.stderr)
 
     if args.diff:
-        diff = _unified_diff(text, result.text, args.path)
+        diff = _unified_diff(text, result.text, target)
         if diff:
             sys.stdout.write(diff)
             if not diff.endswith("\n"):
                 sys.stdout.write("\n")
     elif args.json:
         payload: dict[str, object] = {
-            "path": args.path,
+            "path": target,
             "text": result.text,
-            "diff": _unified_diff(text, result.text, args.path),
-            "fixed": _findings_payload(result.fixed, args.path),
-            "llm_fixed": _findings_payload(result.llm_fixed, args.path),
-            "remaining": _findings_payload(result.remaining, args.path),
+            "diff": _unified_diff(text, result.text, target),
+            "fixed": _findings_payload(result.fixed, target),
+            "llm_fixed": _findings_payload(result.llm_fixed, target),
+            "remaining": _findings_payload(result.remaining, target),
             "errors": result.errors,
         }
         print(json.dumps(payload, indent=2))
     else:
         auto = len(result.fixed) + len(result.llm_fixed)
-        print(f"{args.path}: {auto} fixed, {len(result.remaining)} need manual attention")
+        print(f"{target}: {auto} fixed, {len(result.remaining)} need manual attention")
         for f in result.remaining:
             print(f"  - [{f.rule_id}] {f.message}")
         if result.remaining:
@@ -210,8 +242,8 @@ def cmd_fix(args: argparse.Namespace) -> int:
             sys.stdout.write(result.text)
             if not result.text.endswith("\n"):
                 sys.stdout.write("\n")
-    if args.in_place and args.path != "-":
-        Path(args.path).write_text(result.text, encoding="utf-8")
+    if args.in_place and target != "-":
+        Path(target).write_text(result.text, encoding="utf-8")
     return 1 if result.remaining else 0
 
 
