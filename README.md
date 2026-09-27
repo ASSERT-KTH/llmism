@@ -19,6 +19,26 @@ llmism detect - --format markdown < draft.txt
 llmism detect post.md --human    # console table for humans
 ```
 
+### Per-rule configuration
+
+A `.llmism.toml` in the working directory (override with `--config`)
+disables or tunes rules, ruff/stylelint-style:
+
+```toml
+# .llmism.toml
+ignore = ["low-burstiness", "merely"]      # disable rules everywhere
+
+[rules.em-dash-overuse]
+max-per-paragraph = 4                       # tune a threshold
+
+[rules.leverage-verb]
+suggestion = "draw on"                      # override a replacement
+```
+
+Structural rules expose their thresholds (`min-cv`, `max-words`, ...);
+lexical/phrasal rules accept `suggestion`. Unknown rules or keys are a
+hard error (exit 2), so typos never silently no-op.
+
 Each finding carries a `fix` object an agent can act on directly:
 `{"kind": "replace", "replacement": "use", "command": "llmism fix post.md"}`
 for deterministic fixes, and

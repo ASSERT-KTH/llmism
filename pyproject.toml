@@ -43,5 +43,9 @@ python_version = "3.10"
 strict = true
 
 [[tool.mypy.overrides]]
+module = "tomllib"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "openai"
 ignore_missing_imports = true

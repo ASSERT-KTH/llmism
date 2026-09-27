@@ -7,6 +7,7 @@ import re
 import statistics
 from dataclasses import dataclass
 
+from ._config import DEFAULTS, Config
 from ._markup import (
     Span,
     bold_lead_in_bullets,
@@ -20,22 +21,26 @@ __all__ = ["Finding", "Detector"]
 
 CATEGORIES = ("lexical", "phrasal", "structural")
 
-# --- structural thresholds (tunable) -----------------------------------------
-EM_DASH_MAX_PER_PARAGRAPH = 2
-BOLD_LEAD_IN_MIN_RUN = 3
-BURSTINESS_MIN_CV = 0.25  # stdev/mean of sentence length (in words)
-BURSTINESS_MIN_SENTENCES = 5
-PARAGRAPH_MIN_CV = 0.40
-PARAGRAPH_MIN_COUNT = 4
-CADENCE_ZIGZAG = 0.85  # share of successive length-difference sign flips
-CADENCE_MIN_CV = 0.25
-OPENER_REPETITION_MIN = 3
-REP_N = 6  # n-gram size for degenerate repetition
+# --- structural thresholds: defaults live in _config.DEFAULTS, override in .llmism.toml
+EM_DASH_MAX_PER_PARAGRAPH = DEFAULTS["em-dash-overuse"]["max-per-paragraph"]
+BOLD_LEAD_IN_MIN_RUN = DEFAULTS["bold-lead-in-bullets"]["min-run"]
+BURSTINESS_MIN_CV = DEFAULTS["low-burstiness"]["min-cv"]
+BURSTINESS_MIN_SENTENCES = DEFAULTS["low-burstiness"]["min-sentences"]
+PARAGRAPH_MIN_CV = DEFAULTS["uniform-paragraphs"]["min-cv"]
+PARAGRAPH_MIN_COUNT = DEFAULTS["uniform-paragraphs"]["min-count"]
+CADENCE_ZIGZAG = DEFAULTS["mechanical-cadence"]["zigzag"]
+CADENCE_MIN_CV = DEFAULTS["mechanical-cadence"]["min-cv"]
+OPENER_REPETITION_MIN = DEFAULTS["opener-repetition"]["min"]
+REP_N = DEFAULTS["degenerate-repetition"]["n"]
 REP_MIN_WORDS = REP_N * 3
-REP_THRESHOLD = 0.20
-HEDGE_STACK_MIN = 2
+REP_THRESHOLD = DEFAULTS["degenerate-repetition"]["threshold"]
+HEDGE_STACK_MIN = DEFAULTS["hedge-stacking"]["min"]
 MIN_WORDS_FOR_SYN_CLUSTERS = 40
-SYNONYM_WINDOW_WORDS = 300  # cycling = same referent, so terms must be near each other
+SYNONYM_WINDOW_WORDS = DEFAULTS["synonym-cycling"]["window-words"]
+COLON_LIST_MIN_ITEMS = DEFAULTS["colon-clause"]["list-min-items"]
+COLON_LABEL_MAX_WORDS = DEFAULTS["colon-clause"]["label-max-words"]
+FRAGMENT_MAX_WORDS = DEFAULTS["verbless-fragment"]["max-words"]
+HEADER_MAX_WORDS = DEFAULTS["sentence-header"]["max-words"]
 
 EM_DASH = "\N{EM DASH}"
 
@@ -46,8 +51,6 @@ _HEDGE = re.compile(
     re.IGNORECASE,
 )
 # colon-hinged sentences: a colon is only legitimate before a list of 3+ items
-COLON_LIST_MIN_ITEMS = 3
-COLON_LABEL_MAX_WORDS = 3  # shorter left sides are key-value specs, not clauses
 _COLON = re.compile(r":")
 _LIST_MARKER = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s*")
 _SKIP_LINE = re.compile(r"^\s*(?:#{1,6}\s|\||>\s|```)")
@@ -57,7 +60,6 @@ _TIME_COLON = re.compile(r"\d$")
 _CODEY = re.compile(r"[=<>{}\[\]|$\\]|0x|::|\w\(\)|/\w+/")
 
 # verbless fragments used as sentences ("Two things worth watching.")
-FRAGMENT_MAX_WORDS = 6
 _FRAGMENT_OPENER = re.compile(
     r"^(?:the|a|an|one|two|three|four|another|no|same|other|both|this|that|these|those)\b",
     re.IGNORECASE,
@@ -72,13 +74,32 @@ _FINITE_VERB = re.compile(
 )
 
 # headers are labels, not sentences
-HEADER_MAX_WORDS = 8
 _MD_HEADER = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 _REP_WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
 # A trailing run of social tags, not ordinary Markdown headings or inline tags.
-_HASHTAG_RUN = re.compile(
-    r"(?:^|\n)([ \t]*(?:#[A-Za-z][\w-]*[ \t]+){5,}#[A-Za-z][\w-]*[ \t]*)(?=\n|\Z)"
-)
+# A trailing run of social tags, not ordinary Markdown headings or inline tags.
+HASHTAG_MIN_TAGS = DEFAULTS["hashtag-stuffing"]["min-tags"]
+# config key -> module constant, for _apply_to_thresholds
+_PARAM_TO_CONST = {
+    ("em-dash-overuse", "max-per-paragraph"): "EM_DASH_MAX_PER_PARAGRAPH",
+    ("bold-lead-in-bullets", "min-run"): "BOLD_LEAD_IN_MIN_RUN",
+    ("low-burstiness", "min-cv"): "BURSTINESS_MIN_CV",
+    ("low-burstiness", "min-sentences"): "BURSTINESS_MIN_SENTENCES",
+    ("uniform-paragraphs", "min-cv"): "PARAGRAPH_MIN_CV",
+    ("uniform-paragraphs", "min-count"): "PARAGRAPH_MIN_COUNT",
+    ("mechanical-cadence", "zigzag"): "CADENCE_ZIGZAG",
+    ("mechanical-cadence", "min-cv"): "CADENCE_MIN_CV",
+    ("opener-repetition", "min"): "OPENER_REPETITION_MIN",
+    ("hedge-stacking", "min"): "HEDGE_STACK_MIN",
+    ("colon-clause", "label-max-words"): "COLON_LABEL_MAX_WORDS",
+    ("colon-clause", "list-min-items"): "COLON_LIST_MIN_ITEMS",
+    ("verbless-fragment", "max-words"): "FRAGMENT_MAX_WORDS",
+    ("sentence-header", "max-words"): "HEADER_MAX_WORDS",
+    ("synonym-cycling", "window-words"): "SYNONYM_WINDOW_WORDS",
+    ("degenerate-repetition", "n"): "REP_N",
+    ("degenerate-repetition", "threshold"): "REP_THRESHOLD",
+    ("hashtag-stuffing", "min-tags"): "HASHTAG_MIN_TAGS",
+}
 _SYNONYM_CLUSTERS = [
     ("protagonist", "main character", "central figure", "hero", "heroine"),
     ("company", "firm", "organization", "enterprise", "business"),
@@ -109,10 +130,44 @@ class Finding:
 
 
 class Detector:
-    """Scans text for LLM-sounding lexical, phrasal and structural tics."""
+    """Scans text for LLM-sounding lexical, phrasal and structural tics.
 
-    def __init__(self, patterns: list[Pattern] | None = None) -> None:
-        self._patterns = patterns if patterns is not None else compiled_patterns()
+    ``config`` carries per-rule settings from ``.llmism.toml`` (see
+    :mod:`llmism._config`); ``None`` uses all defaults with nothing ignored.
+    """
+
+    def __init__(
+        self, patterns: list[Pattern] | None = None, config: Config | None = None
+    ) -> None:
+        self.config = config or Config()
+        if patterns is None:
+            patterns = self._apply_to_patterns(compiled_patterns())
+        self._patterns = patterns
+        self._apply_to_thresholds()
+
+    def _apply_to_patterns(self, patterns: list[Pattern]) -> list[Pattern]:
+        """Drop ignored rules; apply ``suggestion`` overrides from config."""
+        from dataclasses import replace
+
+        out: list[Pattern] = []
+        for p in patterns:
+            if self.config.ignored(p.id):
+                continue
+            override = self.config.rules.get(p.id, {}).get("suggestion")
+            if override is not None and override != p.suggestion:
+                out.append(replace(p, suggestion=override))
+            else:
+                out.append(p)
+        return out
+
+    def _apply_to_thresholds(self) -> None:
+        """Bind defaults, then config overrides, onto module constants."""
+        import llmism.detector as d
+
+        g = d.__dict__
+        for (rule_id, key), const in _PARAM_TO_CONST.items():
+            g[const] = self.config.param(rule_id, key)
+        g["REP_MIN_WORDS"] = g["REP_N"] * 3
 
     def scan(self, text: str, fmt: str = "markdown") -> list[Finding]:
         ranges = scannable_ranges(text, fmt)
@@ -129,12 +184,18 @@ class Detector:
         findings.extend(self._scan_synonym_cycling(text, fmt))
         findings.extend(self._scan_degenerate_repetition(text, fmt))
         findings.extend(self._scan_hashtag_stuffing(text, ranges))
+        if self.config.ignore:
+            findings = [f for f in findings if not self.config.ignored(f.rule_id)]
         return sorted(findings, key=lambda f: (f.start, f.end))
 
     def _scan_hashtag_stuffing(self, text: str, ranges: list[Span]) -> list[Finding]:
-        """Flag lines made of six or more social tags outside protected markup."""
+        """Flag lines made of many social tags outside protected markup."""
         findings: list[Finding] = []
-        for match in _HASHTAG_RUN.finditer(text):
+        run_re = re.compile(
+            rf"(?:^|\n)([ \t]*(?:#[A-Za-z][\w-]*[ \t]+){{{HASHTAG_MIN_TAGS - 1},}}"
+            rf"#[A-Za-z][\w-]*[ \t]*)(?=\n|\Z)"
+        )
+        for match in run_re.finditer(text):
             start, end = match.span(1)
             if not any(span.start <= start and end <= span.end for span in ranges):
                 continue
@@ -145,7 +206,7 @@ class Detector:
                     start=start,
                     end=end,
                     matched_text=text[start:end],
-                    message="Six or more tags in one line; keep only useful tags",
+                    message=f"{HASHTAG_MIN_TAGS} or more tags in one line; keep only useful tags",
                 )
             )
         return findings

@@ -9,6 +9,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from ._config import Config, ConfigError, load_config
 from .detector import Detector, Finding
 from .remediator import Remediator
 
@@ -43,6 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
             choices=_FORMATS,
             default=None,
             help="input format (default: auto-detect from extension, else text)",
+        )
+        p.add_argument(
+            "--config",
+            default=".llmism.toml",
+            help="per-rule config file (default: .llmism.toml in the cwd)",
         )
         p.add_argument(
             "--human",
@@ -129,10 +135,19 @@ def _print_findings(findings: list[Finding], text: str, path: str) -> None:
     print(f"\n{len(findings)} finding(s)")
 
 
+def _load_config_or_exit(path: str) -> Config:
+    try:
+        return load_config(path)
+    except ConfigError as e:
+        print(f"error: {e}", file=sys.stderr)
+        raise SystemExit(2) from e
+
+
 def cmd_detect(args: argparse.Namespace) -> int:
+    config = _load_config_or_exit(args.config)
     text = _read(args.path)
     fmt = args.format or _guess_format(args.path)
-    findings = Detector().scan(text, fmt)
+    findings = Detector(config=config).scan(text, fmt)
     if args.json:
         print(json.dumps(_findings_payload(findings, args.path), indent=2))
     else:
@@ -141,9 +156,10 @@ def cmd_detect(args: argparse.Namespace) -> int:
 
 
 def cmd_fix(args: argparse.Namespace) -> int:
+    config = _load_config_or_exit(args.config)
     text = _read(args.path)
     fmt = args.format or _guess_format(args.path)
-    findings = Detector().scan(text, fmt)
+    findings = Detector(config=config).scan(text, fmt)
     result = Remediator().fix(text, findings, use_llm=args.llm)
 
     if args.json:
