@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -66,6 +67,21 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _fix_payload(f: Finding, path: str) -> dict[str, str]:
+    """How to fix one finding: deterministic replacement or LLM rewrite."""
+    if f.suggestion is not None:
+        return {
+            "kind": "replace",
+            "replacement": f.suggestion,
+            "command": f"llmism fix {shlex.quote(path)}",
+        }
+    return {
+        "kind": "llm",
+        "command": f"llmism fix {shlex.quote(path)} --llm",
+        "hint": f.message,
+    }
+
+
 def _findings_payload(findings: list[Finding], path: str) -> list[dict[str, object]]:
     return [
         {
@@ -77,6 +93,7 @@ def _findings_payload(findings: list[Finding], path: str) -> list[dict[str, obje
             "match": f.matched_text,
             "message": f.message,
             "suggestion": f.suggestion,
+            "fix": _fix_payload(f, path),
         }
         for f in findings
     ]

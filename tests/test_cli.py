@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -44,6 +45,32 @@ class TestDetect:
         main(["detect", str(sample_md), "--json"])
         payload = json.loads(capsys.readouterr().out)
         assert any(f["rule"] == "leverage-verb" for f in payload)
+
+    def test_fix_hint_included(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        main(["detect", str(sample_md)])
+        payload = json.loads(capsys.readouterr().out)
+        by_rule = {f["rule"]: f["fix"] for f in payload}
+        # deterministic fix: replacement + command
+        det = by_rule["leverage-verb"]
+        assert det["kind"] == "replace"
+        assert det["replacement"] == "use"
+        assert det["command"] == f"llmism fix {shlex.quote(str(sample_md))}"
+        # flag-only finding: llm rewrite + hint
+        llm = by_rule["its-not-x-its-y"]
+        assert llm["kind"] == "llm"
+        assert llm["command"] == f"llmism fix {shlex.quote(str(sample_md))} --llm"
+        assert llm["hint"]
+
+    def test_fix_hint_quotes_paths(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        p = tmp_path / "my draft.md"
+        p.write_text("We leverage it.", encoding="utf-8")
+        main(["detect", str(p)])
+        payload = json.loads(capsys.readouterr().out)
+        assert payload[0]["fix"]["command"] == f"llmism fix '{p}'"
 
     def test_stdin(
         self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch

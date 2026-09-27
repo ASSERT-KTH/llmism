@@ -19,6 +19,12 @@ llmism detect - --format markdown < draft.txt
 llmism detect post.md --human    # console table for humans
 ```
 
+Each finding carries a `fix` object an agent can act on directly:
+`{"kind": "replace", "replacement": "use", "command": "llmism fix post.md"}`
+for deterministic fixes, and
+`{"kind": "llm", "command": "llmism fix post.md --llm", "hint": "..."}`
+for structural findings that need a model rewrite.
+
 ```
 LINE  CATEGORY   RULE                     MATCH
 -----  ---------  -----------------------  ------------------------------------
