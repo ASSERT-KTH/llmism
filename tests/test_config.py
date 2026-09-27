@@ -70,6 +70,23 @@ class TestLoadConfig:
         with pytest.raises(ConfigError, match="unknown top-level key"):
             load_config(write_config(tmp_path, "select = ['all']\n"))
 
+    def test_include_exclude_roundtrip(self, tmp_path: Path) -> None:
+        cfg = load_config(
+            write_config(
+                tmp_path, 'include = [".rst"]\nexclude = ["vendor", "generated"]\n'
+            )
+        )
+        assert cfg.include == frozenset({".rst"})
+        assert cfg.exclude == frozenset({"vendor", "generated"})
+
+    def test_include_not_a_list_rejected(self, tmp_path: Path) -> None:
+        with pytest.raises(ConfigError, match="include must be a list"):
+            load_config(write_config(tmp_path, 'include = ".rst"\n'))
+
+    def test_exclude_wrong_element_rejected(self, tmp_path: Path) -> None:
+        with pytest.raises(ConfigError, match="exclude must be a list"):
+            load_config(write_config(tmp_path, "exclude = [1, 2]\n"))
+
 
 class TestDetectorWithConfig:
     def test_ignored_rule_not_reported(self, tmp_path: Path) -> None:

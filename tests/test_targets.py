@@ -48,6 +48,21 @@ class TestExpandTargets:
     def test_missing_path_passes_through(self) -> None:
         assert expand_targets("nope.md") == ["nope.md"]
 
+    def test_include_ext_from_config(self, docs: Path) -> None:
+        from llmism._config import Config
+
+        (docs / "notes.rst").write_text("We leverage the data.\n", encoding="utf-8")
+        cfg = Config(include=frozenset({".rst"}))
+        names = [Path(f).name for f in expand_targets(str(docs), config=cfg)]
+        assert names == ["api.md", "clean.txt", "index.md", "notes.rst"]
+
+    def test_exclude_dir_from_config(self, docs: Path) -> None:
+        from llmism._config import Config
+
+        cfg = Config(exclude=frozenset({"guides"}))
+        names = [Path(f).name for f in expand_targets(str(docs), config=cfg)]
+        assert names == ["index.md"]
+
 
 class TestDetectDirectory:
     def test_json_per_file(
@@ -118,8 +133,11 @@ class TestFixDirectory:
     ) -> None:
         rc = main(["fix", str(docs), "--in-place"])
         out = capsys.readouterr().out
-        payloads = out.split("}\n{")
-        assert len(payloads) == 3  # three scannable files
+        assert out.startswith("[") and out.rstrip().endswith("]")  # one JSON array
+        import json
+
+        payloads = json.loads(out)
+        assert isinstance(payloads, list) and len(payloads) == 3  # three scannable files
         assert rc == 1
 
     def test_single_file_still_works(

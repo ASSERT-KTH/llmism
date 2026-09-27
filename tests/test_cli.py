@@ -128,16 +128,18 @@ class TestFix:
     def test_json_is_default(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         main(["fix", str(sample_md)])
         payload = json.loads(capsys.readouterr().out)
-        assert any(f["rule"] == "leverage-verb" for f in payload["fixed"])
-        assert any(f["rule"] == "its-not-x-its-y" for f in payload["remaining"])
-        assert "We use the data" in payload["text"]
+        assert isinstance(payload, list) and len(payload) == 1
+        assert any(f["rule"] == "leverage-verb" for f in payload[0]["fixed"])
+        assert any(f["rule"] == "its-not-x-its-y" for f in payload[0]["remaining"])
+        assert "We use the data" in payload[0]["text"]
 
     def test_json_flag_still_works(
         self, sample_md: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         main(["fix", str(sample_md), "--json"])
         payload = json.loads(capsys.readouterr().out)
-        assert "We use the data" in payload["text"]
+        assert isinstance(payload, list) and len(payload) == 1
+        assert "We use the data" in payload[0]["text"]
 
     def test_in_place(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         main(["fix", str(sample_md), "--in-place"])
@@ -210,7 +212,8 @@ class TestFix:
         monkeypatch.delenv("INFERENCE_API_KEY", raising=False)
         rc = main(["fix", str(p), "--llm", "--json"])
         payload = json.loads(capsys.readouterr().out)
-        assert payload["errors"] == ["INFERENCE_API_KEY is not set"]
+        assert isinstance(payload, list) and len(payload) == 1
+        assert payload[0]["errors"] == ["INFERENCE_API_KEY is not set"]
         assert rc == 1
 
 

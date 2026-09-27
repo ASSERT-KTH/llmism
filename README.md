@@ -44,6 +44,9 @@ disables or tunes rules, ruff/stylelint-style:
 # .llmism.toml
 ignore = ["low-burstiness", "merely"]      # disable rules everywhere
 
+include = [".rst"]                # extra extensions scanned in directory walks
+exclude = ["vendor", "generated"] # extra directory names skipped in walks
+
 [rules.em-dash-overuse]
 max-per-paragraph = 4                       # tune a threshold
 
@@ -82,7 +85,9 @@ llmism fix docs/ --in-place           # rewrite every scannable file in docs/
 ```
 
 Fixing a directory requires `--in-place` or `--diff` (dumping several
-rewritten files to stdout would be useless).
+rewritten files to stdout would be useless). JSON `fix` output is a
+**JSON array** with one payload object per file, for single files and
+trees alike.
 
 - **Lexical/phrasal findings with a safe replacement** are rewritten
   deterministically (capitalisation preserved, offsets applied right-to-left).

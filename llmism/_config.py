@@ -8,6 +8,9 @@ has ignore/select plus a config file; llmism follows the same shape:
     # .llmism.toml
     ignore = ["em-dash-overuse", "low-burstiness"]   # disable rules everywhere
 
+    include = [".rst"]                # extra extensions to scan in directory walks
+    exclude = ["vendor", "generated"] # extra directory names to skip
+
     [rules.em-dash-overuse]
     max-per-paragraph = 4                             # tune a threshold
 
@@ -58,6 +61,8 @@ class Config:
 
     ignore: frozenset[str] = field(default_factory=frozenset)
     rules: dict[str, dict[str, Any]] = field(default_factory=dict)
+    include: frozenset[str] = field(default_factory=frozenset)
+    exclude: frozenset[str] = field(default_factory=frozenset)
 
     def param(self, rule_id: str, key: str) -> Any:
         """Value of ``rules[rule_id][key]``, falling back to the default."""
@@ -76,7 +81,7 @@ def load_config(path: str | Path = ".llmism.toml") -> Config:
         return Config()
     data: dict[str, Any] = tomllib.loads(p.read_text(encoding="utf-8"))
 
-    unknown_top = set(data) - {"ignore", "rules"}
+    unknown_top = set(data) - {"ignore", "rules", "include", "exclude"}
     if unknown_top:
         msg = f"{p}: unknown top-level key(s) {sorted(unknown_top)}"
         raise ConfigError(msg)
@@ -85,6 +90,9 @@ def load_config(path: str | Path = ".llmism.toml") -> Config:
     if ignore - _VALID_RULE_IDS:
         msg = f"{p}: unknown rule(s) in ignore: {sorted(ignore - _VALID_RULE_IDS)}"
         raise ConfigError(msg)
+
+    include = _ext_list(data.get("include", []), "include", p)
+    exclude = _ext_list(data.get("exclude", []), "exclude", p)
     rules: dict[str, dict[str, Any]] = {}
     for rule_id, params in data.get("rules", {}).items():
         if rule_id in DEFAULTS:
@@ -105,7 +113,15 @@ def load_config(path: str | Path = ".llmism.toml") -> Config:
                 )
                 raise ConfigError(msg)
         rules[rule_id] = dict(params)
-    return Config(ignore=ignore, rules=rules)
+    return Config(ignore=ignore, rules=rules, include=include, exclude=exclude)
+
+
+def _ext_list(raw: object, key: str, p: Path) -> frozenset[str]:
+    """Validate an include/exclude list of file extensions / dir names."""
+    if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+        msg = f"{p}: {key} must be a list of strings"
+        raise ConfigError(msg)
+    return frozenset(raw)
 
 
 def _pattern_ids() -> frozenset[str]:

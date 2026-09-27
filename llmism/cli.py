@@ -152,7 +152,7 @@ def _load_config_or_exit(path: str) -> Config:
 
 def cmd_detect(args: argparse.Namespace) -> int:
     config = _load_config_or_exit(args.config)
-    targets = expand_targets(args.path, args.format)
+    targets = expand_targets(args.path, args.format, config)
     detector = Detector(config=config)
     all_findings: list[tuple[str, str, list[Finding]]] = []
     for target in targets:
@@ -198,15 +198,50 @@ def cmd_fix(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
-    targets = expand_targets(args.path, args.format)
+    targets = expand_targets(args.path, args.format, config)
     detector = Detector(config=config)
+    if args.json and not args.diff:
+        # collect every payload first, then print one JSON array
+        payloads: list[dict[str, object]] = []
+        rc = 0
+        for target in targets:
+            payload, target_rc = _fix_file_payload(args, target, detector)
+            payloads.append(payload)
+            rc = max(rc, target_rc)
+        print(json.dumps(payloads, indent=2))
+        return rc
     rc = 0
     for target in targets:
-        rc = max(rc, _fix_one(args, target, detector))
+        rc = max(rc, _fix_stream(args, target, detector))
     return rc
 
 
-def _fix_one(args: argparse.Namespace, target: str, detector: Detector) -> int:
+def _fix_file_payload(
+    args: argparse.Namespace, target: str, detector: Detector
+) -> tuple[dict[str, object], int]:
+    """Run fix on one target and return (JSON payload, exit code)."""
+    text = _read(target)
+    fmt = args.format or _guess_format(target)
+    findings = detector.scan(text, fmt)
+    result = Remediator().fix(text, findings, use_llm=args.llm)
+    for e in result.errors:
+        print(f"error: {e}", file=sys.stderr)
+    if args.in_place and target != "-":
+        Path(target).write_text(result.text, encoding="utf-8")
+    payload: dict[str, object] = {
+        "path": target,
+        "text": result.text,
+        "diff": _unified_diff(text, result.text, target),
+        "fixed": _findings_payload(result.fixed, target),
+        "llm_fixed": _findings_payload(result.llm_fixed, target),
+        "remaining": _findings_payload(result.remaining, target),
+        "errors": result.errors,
+    }
+    return payload, (1 if result.remaining else 0)
+
+
+def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> int:
+    """Run fix on one target, streaming human/diff output. Returns exit code."""
     text = _read(target)
     fmt = args.format or _guess_format(target)
     findings = detector.scan(text, fmt)
@@ -220,17 +255,6 @@ def _fix_one(args: argparse.Namespace, target: str, detector: Detector) -> int:
             sys.stdout.write(diff)
             if not diff.endswith("\n"):
                 sys.stdout.write("\n")
-    elif args.json:
-        payload: dict[str, object] = {
-            "path": target,
-            "text": result.text,
-            "diff": _unified_diff(text, result.text, target),
-            "fixed": _findings_payload(result.fixed, target),
-            "llm_fixed": _findings_payload(result.llm_fixed, target),
-            "remaining": _findings_payload(result.remaining, target),
-            "errors": result.errors,
-        }
-        print(json.dumps(payload, indent=2))
     else:
         auto = len(result.fixed) + len(result.llm_fixed)
         print(f"{target}: {auto} fixed, {len(result.remaining)} need manual attention")
