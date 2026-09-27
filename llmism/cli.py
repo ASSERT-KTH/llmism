@@ -43,7 +43,18 @@ def build_parser() -> argparse.ArgumentParser:
             default=None,
             help="input format (default: auto-detect from extension, else text)",
         )
-        p.add_argument("--json", action="store_true", help="machine-readable output")
+        p.add_argument(
+            "--human",
+            dest="json",
+            action="store_false",
+            help="human-readable output (JSON is the default)",
+        )
+        p.add_argument(
+            "--json",
+            dest="json",
+            action="store_true",
+            help="machine-readable output (default; accepted for compatibility)",
+        )
 
     p_detect = sub.add_parser("detect", help="report LLMisms without changing anything")
     add_common(p_detect)

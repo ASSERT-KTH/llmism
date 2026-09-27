@@ -13,10 +13,10 @@ pip install -e ".[dev]"
 ## Detect
 
 ```sh
-llmism detect README.md          # console table, exit 1 if findings
+llmism detect README.md          # JSON findings on stdout, exit 1 if any
 llmism detect doc.tex            # .tex → LaTeX, .md → Markdown, else text
 llmism detect - --format markdown < draft.txt
-llmism detect post.md --json     # machine-readable findings
+llmism detect post.md --human    # console table for humans
 ```
 
 ```
@@ -30,9 +30,9 @@ LINE  CATEGORY   RULE                     MATCH
 ## Fix
 
 ```sh
-llmism fix post.md                    # rewritten text on stdout
+llmism fix post.md                    # JSON payload {text, fixed, remaining, ...}
+llmism fix post.md --human            # rewritten text on stdout
 llmism fix post.md --in-place         # rewrite the file
-llmism fix post.md --json             # {text, fixed, remaining, ...}
 ```
 
 - **Lexical/phrasal findings with a safe replacement** are rewritten

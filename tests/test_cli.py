@@ -22,19 +22,28 @@ def sample_md(tmp_path: Path) -> Path:
 
 
 class TestDetect:
-    def test_table_output(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        rc = main(["detect", str(sample_md)])
+    def test_human_table_output(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["detect", str(sample_md), "--human"])
         out = capsys.readouterr().out
         assert "leverage" in out and "its-not-x-its-y" in out
         assert "lexical" in out
         assert "print" not in out  # code fence skipped
         assert rc == 1
 
-    def test_json_output(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        main(["detect", str(sample_md), "--json"])
+    def test_json_is_default(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        main(["detect", str(sample_md)])
         payload = json.loads(capsys.readouterr().out)
         assert any(f["rule"] == "leverage-verb" for f in payload)
         assert all("start" in f and "category" in f for f in payload)
+
+    def test_json_flag_still_works(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        main(["detect", str(sample_md), "--json"])
+        payload = json.loads(capsys.readouterr().out)
+        assert any(f["rule"] == "leverage-verb" for f in payload)
 
     def test_stdin(
         self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
@@ -42,7 +51,7 @@ class TestDetect:
         import io
 
         monkeypatch.setattr("sys.stdin", io.StringIO("We leverage."))
-        main(["detect", "-"])
+        main(["detect", "-", "--human"])
         assert "leverage" in capsys.readouterr().out
 
     def test_clean_file_returns_zero(
@@ -51,8 +60,9 @@ class TestDetect:
         p = tmp_path / "ok.txt"
         p.write_text("Two bugs were found. Both fixed.", encoding="utf-8")
         rc = main(["detect", str(p)])
+        payload = json.loads(capsys.readouterr().out)
+        assert payload == []
         assert rc == 0
-        assert "no LLMisms" in capsys.readouterr().out
 
     def test_format_override_for_stdin(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
@@ -61,8 +71,9 @@ class TestDetect:
 
         monkeypatch.setattr("sys.stdin", io.StringIO("a `leverage` b"))
         rc = main(["detect", "-", "--format", "markdown"])
+        payload = json.loads(capsys.readouterr().out)
+        assert payload == []
         assert rc == 0
-        assert "no LLMisms" in capsys.readouterr().out
 
     def test_latex_extension_autodetected(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -77,19 +88,28 @@ class TestDetect:
 
 
 class TestFix:
-    def test_stdout_rewrite(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        rc = main(["fix", str(sample_md)])
+    def test_human_stdout_rewrite(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["fix", str(sample_md), "--human"])
         out = capsys.readouterr().out
         assert "We use the data" in out  # prose rewritten
         assert "print('leverage')" in out  # code fence untouched
         assert "It's not a bug" in out  # flag-only pattern kept
         assert rc == 1  # remaining manual findings
 
-    def test_json_fix(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        main(["fix", str(sample_md), "--json"])
+    def test_json_is_default(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        main(["fix", str(sample_md)])
         payload = json.loads(capsys.readouterr().out)
         assert any(f["rule"] == "leverage-verb" for f in payload["fixed"])
         assert any(f["rule"] == "its-not-x-its-y" for f in payload["remaining"])
+        assert "We use the data" in payload["text"]
+
+    def test_json_flag_still_works(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        main(["fix", str(sample_md), "--json"])
+        payload = json.loads(capsys.readouterr().out)
         assert "We use the data" in payload["text"]
 
     def test_in_place(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
