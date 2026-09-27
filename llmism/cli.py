@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import shlex
 import sys
@@ -70,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
     add_common(p_fix)
     p_fix.add_argument("--llm", action="store_true", help="use an LLM for structural fixes")
     p_fix.add_argument("--in-place", action="store_true", help="rewrite the input file")
+    p_fix.add_argument(
+        "--diff",
+        action="store_true",
+        help="print a unified diff of the rewrite instead of the text (review before applying)",
+    )
     return parser
 
 
@@ -155,17 +161,38 @@ def cmd_detect(args: argparse.Namespace) -> int:
     return 1 if findings else 0
 
 
+def _unified_diff(original: str, rewritten: str, path: str) -> str:
+    """Git-style unified diff of the rewrite (``a/<path>`` vs ``b/<path>``)."""
+    return "".join(
+        difflib.unified_diff(
+            original.splitlines(keepends=True),
+            rewritten.splitlines(keepends=True),
+            fromfile=f"a/{path}",
+            tofile=f"b/{path}",
+        )
+    )
+
+
 def cmd_fix(args: argparse.Namespace) -> int:
     config = _load_config_or_exit(args.config)
     text = _read(args.path)
     fmt = args.format or _guess_format(args.path)
     findings = Detector(config=config).scan(text, fmt)
     result = Remediator().fix(text, findings, use_llm=args.llm)
+    for e in result.errors:
+        print(f"error: {e}", file=sys.stderr)
 
-    if args.json:
+    if args.diff:
+        diff = _unified_diff(text, result.text, args.path)
+        if diff:
+            sys.stdout.write(diff)
+            if not diff.endswith("\n"):
+                sys.stdout.write("\n")
+    elif args.json:
         payload: dict[str, object] = {
             "path": args.path,
             "text": result.text,
+            "diff": _unified_diff(text, result.text, args.path),
             "fixed": _findings_payload(result.fixed, args.path),
             "llm_fixed": _findings_payload(result.llm_fixed, args.path),
             "remaining": _findings_payload(result.remaining, args.path),
@@ -173,20 +200,18 @@ def cmd_fix(args: argparse.Namespace) -> int:
         }
         print(json.dumps(payload, indent=2))
     else:
-        for e in result.errors:
-            print(f"error: {e}", file=sys.stderr)
         auto = len(result.fixed) + len(result.llm_fixed)
         print(f"{args.path}: {auto} fixed, {len(result.remaining)} need manual attention")
         for f in result.remaining:
             print(f"  - [{f.rule_id}] {f.message}")
         if result.remaining:
             print("  (rerun with --llm to rewrite these automatically)")
+        if not args.in_place:
+            sys.stdout.write(result.text)
+            if not result.text.endswith("\n"):
+                sys.stdout.write("\n")
     if args.in_place and args.path != "-":
         Path(args.path).write_text(result.text, encoding="utf-8")
-    elif not args.json:
-        sys.stdout.write(result.text)
-        if not result.text.endswith("\n"):
-            sys.stdout.write("\n")
     return 1 if result.remaining else 0
 
 

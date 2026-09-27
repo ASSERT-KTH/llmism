@@ -151,6 +151,55 @@ class TestFix:
         rc = main(["fix", str(p)])
         assert rc == 0
 
+    def test_diff_prints_unified_diff(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["fix", str(sample_md), "--diff"])
+        out = capsys.readouterr().out
+        assert f"--- a/{sample_md}" in out
+        assert f"+++ b/{sample_md}" in out
+        assert "-We leverage the data and elevate the tool." in out
+        assert "+We use the data and improve the tool." in out
+        assert "print('leverage')" not in out  # untouched lines not in diff body
+        assert rc == 1  # remaining manual findings still gate the exit code
+
+    def test_diff_clean_file_prints_nothing(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        p = tmp_path / "ok.md"
+        p.write_text("Two bugs found. Both fixed.", encoding="utf-8")
+        rc = main(["fix", str(p), "--diff"])
+        assert capsys.readouterr().out == ""
+        assert rc == 0
+
+    def test_diff_overrides_human_text_output(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        main(["fix", str(sample_md), "--diff", "--human"])
+        out = capsys.readouterr().out
+        assert out.startswith("---")  # diff, not the rewritten prose
+        assert "need manual attention" not in out
+
+    def test_diff_does_not_write_in_place(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        before = sample_md.read_text(encoding="utf-8")
+        main(["fix", str(sample_md), "--diff"])
+        assert sample_md.read_text(encoding="utf-8") == before
+
+    def test_diff_in_stdin_uses_dash_path(
+        self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import io
+        import sys as _sys
+
+        monkeypatch.setattr(_sys, "stdin", io.StringIO("We leverage the data.\n"))
+        rc = main(["fix", "-", "--diff"])
+        out = capsys.readouterr().out
+        assert "--- a/-" in out
+        assert "+We use the data." in out
+        assert rc == 0
+
     def test_llm_flag_without_key_reports_error(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -56,8 +56,10 @@ LINE  CATEGORY   RULE                     MATCH
 ## Fix
 
 ```sh
-llmism fix post.md                    # JSON payload {text, fixed, remaining, ...}
+llmism fix post.md                    # JSON payload {text, diff, fixed, remaining, ...}
 llmism fix post.md --human            # rewritten text on stdout
+llmism fix post.md --diff             # unified diff of the rewrite — review it
+llmism fix post.md --llm --diff       # diff the LLM's rewrite before accepting
 llmism fix post.md --in-place         # rewrite the file
 ```
 
