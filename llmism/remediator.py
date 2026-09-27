@@ -33,7 +33,7 @@ class Remediator:
         findings: list[Finding],
         *,
         use_llm: bool = False,
-        model: str = "claude-sonnet-4-5",
+        model: str | None = None,
     ) -> RemediationResult:
         result = RemediationResult(text=text)
         deterministic = [f for f in findings if f.suggestion is not None]

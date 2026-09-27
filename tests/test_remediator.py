@@ -82,25 +82,33 @@ class TestLlmPath:
     ) -> None:
         text = "Style is a habit — mostly — and it shows — often."
 
-        class FakeBlock:
-            type = "text"
-            text = '{"0": "It helps, in short."}'
+        class FakeMessage:
+            content = '{"0": "It helps, in short."}'
 
-        class FakeMessages:
+        class FakeChoice:
+            message = FakeMessage()
+
+        class FakeResponse:
+            choices = [FakeChoice()]
+
+        class FakeCompletions:
             def create(self, **kwargs: object) -> object:
-                return type("Resp", (), {"content": [FakeBlock()]})()
+                return FakeResponse()
 
-        class FakeAnthropic:
+        class FakeChat:
+            completions = FakeCompletions()
+
+        class FakeOpenAI:
             def __init__(self, *args: object, **kwargs: object) -> None:
-                self.messages: object = FakeMessages()
+                self.chat: object = FakeChat()
 
         import sys
         import types
 
-        fake_module = types.ModuleType("anthropic")
-        fake_module.Anthropic = FakeAnthropic  # type: ignore[attr-defined]
-        monkeypatch.setitem(sys.modules, "anthropic", fake_module)
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+        fake_module = types.ModuleType("openai")
+        fake_module.OpenAI = FakeOpenAI  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "openai", fake_module)
+        monkeypatch.setenv("INFERENCE_API_KEY", "sk-test")
 
         findings = Detector().scan(text, "text")
         result = remediator.fix(text, findings, use_llm=True)

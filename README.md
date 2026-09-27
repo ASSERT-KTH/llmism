@@ -42,10 +42,15 @@ llmism fix post.md --json             # {text, fixed, remaining, ...}
   reported as `remaining` unless you pass `--llm`:
 
 ```sh
-pip install -e ".[llm]"   # optional anthropic extra
-export ANTHROPIC_API_KEY=...
+pip install -e ".[llm]"   # optional inference extra
+export INFERENCE_API_KEY=...            # required
+export INFERENCE_BASE_URL=http://...    # optional, Chat Completions server root
+export INFERENCE_MODEL=...              # optional, default gpt-4o-mini
 llmism fix post.md --llm --in-place
 ```
+
+The LLM path speaks the OpenAI-compatible Chat Completions API, so any
+conforming server works (vLLM, llama.cpp, Ollama, OpenRouter, ...).
 
 ## What is detected
 

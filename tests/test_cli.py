@@ -111,10 +111,10 @@ class TestFix:
         p.write_text(
             "- **Speed:** fast.\n- **Cost:** cheap.\n- **Scale:** easy.\n", encoding="utf-8"
         )
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("INFERENCE_API_KEY", raising=False)
         rc = main(["fix", str(p), "--llm", "--json"])
         payload = json.loads(capsys.readouterr().out)
-        assert payload["errors"] == ["ANTHROPIC_API_KEY is not set"]
+        assert payload["errors"] == ["INFERENCE_API_KEY is not set"]
         assert rc == 1
 
 
