@@ -7,7 +7,9 @@ em-dash overuse, bolded bullet lead-ins, etc.
 ## Install (local prototype)
 
 ```sh
-pip install -e ".[dev]"
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"      # add ,llm for --llm
+ln -s "$PWD/.venv/bin/llmism" ~/.local/bin/llmism   # optional: on PATH everywhere
 ```
 
 ## Detect
@@ -98,7 +100,7 @@ trees alike.
   reported as `remaining` unless you pass `--llm`:
 
 ```sh
-pip install -e ".[llm]"   # optional inference extra
+.venv/bin/pip install -e ".[llm]"   # optional inference extra
 export INFERENCE_API_KEY=...            # required
 export INFERENCE_BASE_URL=http://...    # optional, Chat Completions server root
 export INFERENCE_MODEL=...              # optional, default gpt-4o-mini
