@@ -23,9 +23,7 @@ def sample_md(tmp_path: Path) -> Path:
 
 
 class TestDetect:
-    def test_human_table_output(
-        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_human_table_output(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["detect", str(sample_md), "--human"])
         out = capsys.readouterr().out
         assert "leverage" in out and "its-not-x-its-y" in out
@@ -46,9 +44,7 @@ class TestDetect:
         payload = json.loads(capsys.readouterr().out)
         assert any(f["rule"] == "leverage-verb" for f in payload)
 
-    def test_fix_hint_included(
-        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_fix_hint_included(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
         main(["detect", str(sample_md)])
         payload = json.loads(capsys.readouterr().out)
         by_rule = {f["rule"]: f["fix"] for f in payload}

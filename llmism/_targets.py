@@ -29,9 +29,7 @@ _SKIP_DIRS = {
 }
 
 
-def expand_targets(
-    path: str, fmt: str | None = None, config: Config | None = None
-) -> list[str]:
+def expand_targets(path: str, fmt: str | None = None, config: Config | None = None) -> list[str]:
     """Resolve a CLI ``path`` (file, directory or ``-``) to concrete files.
 
     Directories are walked recursively for scannable extensions; VCS and
@@ -63,4 +61,3 @@ def expand_targets(
 
 def _in_skip_dir(f: Path, skip: set[str]) -> bool:
     return any(part in skip for part in f.parts)
-

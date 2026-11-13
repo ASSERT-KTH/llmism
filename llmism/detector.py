@@ -143,9 +143,7 @@ class Detector:
     :mod:`llmism._config`); ``None`` uses all defaults with nothing ignored.
     """
 
-    def __init__(
-        self, patterns: list[Pattern] | None = None, config: Config | None = None
-    ) -> None:
+    def __init__(self, patterns: list[Pattern] | None = None, config: Config | None = None) -> None:
         self.config = config or Config()
         if patterns is None:
             patterns = self._apply_to_patterns(compiled_patterns())

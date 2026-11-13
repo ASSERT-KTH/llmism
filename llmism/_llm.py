@@ -36,16 +36,16 @@ def rewrite_spans(
 
     Returns ``{span_index: replacement}`` (index into the input list).
     """
+    api_key = os.environ.get("INFERENCE_API_KEY")
+    if not api_key:
+        msg = "INFERENCE_API_KEY is not set"
+        raise LLMError(msg)
+
     try:
         from openai import OpenAI  # noqa: PLC0415 - deliberately lazy
     except ImportError as e:  # pragma: no cover - exercised via stub tests
         msg = "the 'llm' extra is required for --llm: pip install llmism[llm]"
         raise LLMError(msg) from e
-
-    api_key = os.environ.get("INFERENCE_API_KEY")
-    if not api_key:
-        msg = "INFERENCE_API_KEY is not set"
-        raise LLMError(msg)
 
     client = OpenAI(api_key=api_key, base_url=os.environ.get("INFERENCE_BASE_URL"))
     resolved_model = model or os.environ.get("INFERENCE_MODEL") or "gpt-4o-mini"

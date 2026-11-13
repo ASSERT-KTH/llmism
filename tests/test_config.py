@@ -29,9 +29,7 @@ class TestLoadConfig:
         assert cfg.param("em-dash-overuse", "max-per-paragraph") == 2
 
     def test_ignore_list(self, tmp_path: Path) -> None:
-        cfg = load_config(
-            write_config(tmp_path, 'ignore = ["em-dash-overuse", "merely"]\n')
-        )
+        cfg = load_config(write_config(tmp_path, 'ignore = ["em-dash-overuse", "merely"]\n'))
         assert cfg.ignored("em-dash-overuse")
         assert cfg.ignored("merely")
         assert not cfg.ignored("leverage-verb")
@@ -62,9 +60,7 @@ class TestLoadConfig:
 
     def test_unknown_key_rejected(self, tmp_path: Path) -> None:
         with pytest.raises(ConfigError, match="unknown key"):
-            load_config(
-                write_config(tmp_path, "[rules.em-dash-overuse]\nmax-per-line = 4\n")
-            )
+            load_config(write_config(tmp_path, "[rules.em-dash-overuse]\nmax-per-line = 4\n"))
 
     def test_unknown_top_level_key_rejected(self, tmp_path: Path) -> None:
         with pytest.raises(ConfigError, match="unknown top-level key"):
@@ -72,9 +68,7 @@ class TestLoadConfig:
 
     def test_include_exclude_roundtrip(self, tmp_path: Path) -> None:
         cfg = load_config(
-            write_config(
-                tmp_path, 'include = [".rst"]\nexclude = ["vendor", "generated"]\n'
-            )
+            write_config(tmp_path, 'include = [".rst"]\nexclude = ["vendor", "generated"]\n')
         )
         assert cfg.include == frozenset({".rst"})
         assert cfg.exclude == frozenset({"vendor", "generated"})
@@ -127,9 +121,7 @@ class TestDetectorWithConfig:
 
 
 class TestCliConfig:
-    def test_detect_honors_ignore(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_detect_honors_ignore(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         import json
 
         from llmism.cli import main
@@ -142,9 +134,7 @@ class TestCliConfig:
         assert payload == []
         assert rc == 0
 
-    def test_bad_config_exits_two(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_bad_config_exits_two(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         from llmism.cli import main
 
         write_config(tmp_path, "[rules.nope]\nmin = 1\n")

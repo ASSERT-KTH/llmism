@@ -65,9 +65,7 @@ class TestExpandTargets:
 
 
 class TestDetectDirectory:
-    def test_json_per_file(
-        self, docs: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_json_per_file(self, docs: Path, capsys: pytest.CaptureFixture[str]) -> None:
         import json
 
         rc = main(["detect", str(docs)])
@@ -76,9 +74,7 @@ class TestDetectDirectory:
         assert paths == {str(docs / "index.md"), str(docs / "guides" / "api.md")}
         assert rc == 1
 
-    def test_human_summary(
-        self, docs: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_human_summary(self, docs: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["detect", str(docs), "--human"])
         out = capsys.readouterr().out
         assert "2 finding(s) in 3 file(s)" in out
@@ -113,9 +109,7 @@ class TestFixDirectory:
         assert rc == 2
         assert "--in-place" in capsys.readouterr().err
 
-    def test_diff_concatenates(
-        self, docs: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_diff_concatenates(self, docs: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["fix", str(docs), "--diff"])
         out = capsys.readouterr().out
         assert f"--- a/{docs / 'index.md'}" in out
@@ -128,9 +122,7 @@ class TestFixDirectory:
         assert "leverage" in (docs / ".git" / "hidden.md").read_text(encoding="utf-8")
         assert rc == 1
 
-    def test_json_multi_file(
-        self, docs: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_json_multi_file(self, docs: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["fix", str(docs), "--in-place"])
         out = capsys.readouterr().out
         assert out.startswith("[") and out.rstrip().endswith("]")  # one JSON array
@@ -140,9 +132,7 @@ class TestFixDirectory:
         assert isinstance(payloads, list) and len(payloads) == 3  # three scannable files
         assert rc == 1
 
-    def test_single_file_still_works(
-        self, docs: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_single_file_still_works(self, docs: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["fix", str(docs / "index.md"), "--in-place"])
         assert "We use the data." in (docs / "index.md").read_text(encoding="utf-8")
         assert rc == 0

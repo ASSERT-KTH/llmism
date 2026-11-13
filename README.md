@@ -147,7 +147,7 @@ from llmism import Detector, Remediator
 
 findings = Detector().scan(text, "markdown")
 result = Remediator().fix(text, findings)
-print(result.remaining)   # findings left for manual fixing
+print(result.remaining)  # findings left for manual fixing
 ```
 
 ## Development
