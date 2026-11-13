@@ -142,3 +142,23 @@ class TestEmptyAndClean:
     def test_empty_text(self, remediator: Remediator) -> None:
         result = remediator.fix("", [])
         assert result.text == ""
+
+
+class TestEmojiRemoval:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("Done ✅ and shipped 🚀🎉.\n", "Done and shipped.\n"),
+            ("✅ Tests pass\n- 🚀 Deploy\n", "Tests pass\n- Deploy\n"),
+            ("Team 👩‍💻 here, ❤️\n", "Team here,\n"),
+            ("ok👍\n", "ok\n"),
+            ("Keep `✅` in code ✅\n", "Keep `✅` in code\n"),
+        ],
+    )
+    def test_emoji_deleted_and_space_collapsed(
+        self, remediator: Remediator, text: str, expected: str
+    ) -> None:
+        findings = Detector().scan(text, "markdown")
+        result = remediator.fix(text, findings)
+        assert result.text == expected
+        assert "emoji" not in [f.rule_id for f in result.remaining]

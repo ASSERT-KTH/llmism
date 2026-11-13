@@ -91,7 +91,9 @@ trees alike.
 
 - **Lexical/phrasal findings with a safe replacement** are rewritten
   deterministically (capitalisation preserved, offsets applied right-to-left).
-- **Structural findings** (em-dash density, bold-lead-in bullets, colon-hinged
+- **Emoji** are deleted, together with the blank that separated them from the
+  text (`Done ✅ and` → `Done and`, `- 🚀 Deploy` → `- Deploy`).
+- **Other structural findings** (em-dash density, bold-lead-in bullets, colon-hinged
   sentences, low burstiness) have no safe deterministic rewrite. They are
   reported as `remaining` unless you pass `--llm`:
 

@@ -278,7 +278,7 @@ class Detector:
         ]
 
     def _scan_emoji(self, text: str, ranges: list[Span]) -> list[Finding]:
-        """Each run of emoji outside code; prose states things in words."""
+        """Each run of emoji outside code; the fix deletes it."""
         return [
             Finding(
                 category="structural",
@@ -286,7 +286,8 @@ class Detector:
                 start=m.start(),
                 end=m.end(),
                 matched_text=m.group(0),
-                message="Emoji in prose; say it in words or drop it",
+                message="Emoji in prose; delete it",
+                suggestion="",
             )
             for m in _EMOJI.finditer(text)
             if any(s.start <= m.start() and m.end() <= s.end for s in ranges)

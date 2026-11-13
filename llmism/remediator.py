@@ -47,7 +47,8 @@ class Remediator:
             if key in applied:
                 continue
             applied.add(key)
-            out = out[: f.start] + self._substitute(f, out) + out[f.end :]
+            start, end = (f.start, f.end) if f.suggestion else self._deletion_span(f, out)
+            out = out[:start] + self._substitute(f, out) + out[end:]
             result.fixed.append(f)
 
         result.text = out
@@ -79,10 +80,29 @@ class Remediator:
         return result
 
     @staticmethod
+    def _deletion_span(f: Finding, text: str) -> tuple[int, int]:
+        """Widen a pure deletion by one side's blanks so no double space remains.
+
+        Blanks before the span go when it ends a word run (``a 🚀.``, ``a 🚀 b``);
+        otherwise blanks after it go (``🚀 Deploy`` at line or bullet start).
+        """
+        start, end = f.start, f.end
+        before = start
+        while before > 0 and text[before - 1] in " \t":
+            before -= 1
+        after = end
+        while after < len(text) and text[after] in " \t":
+            after += 1
+        at_line_start = before == 0 or text[before - 1] == "\n"
+        if before < start and not at_line_start:
+            return before, end
+        return start, after
+
+    @staticmethod
     def _substitute(f: Finding, text: str) -> str:
         """Apply the finding's suggestion, preserving initial capitalisation."""
         original = text[f.start : f.end]
-        suggestion = f.suggestion or original
+        suggestion = original if f.suggestion is None else f.suggestion
         if original[:1].isupper() and suggestion[:1].islower():
             return suggestion[:1].upper() + suggestion[1:]
         return suggestion
