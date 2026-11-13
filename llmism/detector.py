@@ -11,6 +11,7 @@ from ._config import DEFAULTS, Config
 from ._markup import (
     Span,
     bold_lead_in_bullets,
+    bold_sentence_bullets,
     scannable_ranges,
     split_paragraphs,
     split_sentences,
@@ -76,7 +77,13 @@ _FINITE_VERB = re.compile(
 # headers are labels, not sentences
 _MD_HEADER = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 _REP_WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
-# A trailing run of social tags, not ordinary Markdown headings or inline tags.
+# Pictographic emoji, plus the joiners/selectors/skin tones that glue a run
+# together. Text symbols (© ® ™ → × ≥) are not emoji and stay out.
+_EMOJI_BASE = (
+    "\U0001f000-\U0001faff\u2600-\u27bf\u231a\u231b\u23e9-\u23fa"
+    "\u2b05-\u2b07\u2b1b\u2b1c\u2b50\u2b55"
+)
+_EMOJI = re.compile(f"[{_EMOJI_BASE}](?:[{_EMOJI_BASE}\u200d\ufe0f]+)?")
 # A trailing run of social tags, not ordinary Markdown headings or inline tags.
 HASHTAG_MIN_TAGS = DEFAULTS["hashtag-stuffing"]["min-tags"]
 # config key -> module constant, for _apply_to_thresholds
@@ -174,6 +181,8 @@ class Detector:
         findings: list[Finding] = []
         findings.extend(self._scan_patterns(text, ranges))
         findings.extend(self._scan_bold_lead_ins(text, fmt))
+        findings.extend(self._scan_bold_sentence_bullets(text, fmt))
+        findings.extend(self._scan_emoji(text, ranges))
         findings.extend(self._scan_paragraph_rules(text, fmt))
         findings.extend(self._scan_colon_clauses(text, ranges))
         findings.extend(self._scan_verbless_fragments(text, fmt))
@@ -250,6 +259,37 @@ class Detector:
                 message=f"{BOLD_LEAD_IN_MIN_RUN}+ consecutive bullets start with a bold lead-in",
             )
             for span in bold_lead_in_bullets(text, fmt)
+        ]
+
+    def _scan_bold_sentence_bullets(self, text: str, fmt: str) -> list[Finding]:
+        return [
+            Finding(
+                category="structural",
+                rule_id="bold-sentence-bullet",
+                start=span.start,
+                end=span.end,
+                matched_text=text[span.start : span.end],
+                message=(
+                    "Bullet opens with a bolded sentence; drop the bold or write "
+                    "the item as plain prose"
+                ),
+            )
+            for span in bold_sentence_bullets(text, fmt)
+        ]
+
+    def _scan_emoji(self, text: str, ranges: list[Span]) -> list[Finding]:
+        """Each run of emoji outside code; prose states things in words."""
+        return [
+            Finding(
+                category="structural",
+                rule_id="emoji",
+                start=m.start(),
+                end=m.end(),
+                matched_text=m.group(0),
+                message="Emoji in prose; say it in words or drop it",
+            )
+            for m in _EMOJI.finditer(text)
+            if any(s.start <= m.start() and m.end() <= s.end for s in ranges)
         ]
 
     # -- structural: per-paragraph (em-dash, transitions, openers, hedges) -----

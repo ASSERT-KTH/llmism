@@ -37,6 +37,7 @@ __all__ = ["Config", "load_config", "ConfigError"]
 DEFAULTS: dict[str, dict[str, Any]] = {
     "em-dash-overuse": {"max-per-paragraph": 2},
     "bold-lead-in-bullets": {"min-run": 3},
+    "bold-sentence-bullet": {},
     "low-burstiness": {"min-cv": 0.25, "min-sentences": 5},
     "uniform-paragraphs": {"min-cv": 0.40, "min-count": 4},
     "mechanical-cadence": {"zigzag": 0.85, "min-cv": 0.25},
@@ -48,6 +49,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
     "synonym-cycling": {"window-words": 300},
     "degenerate-repetition": {"n": 6, "threshold": 0.20},
     "hashtag-stuffing": {"min-tags": 6},
+    "emoji": {},
 }
 
 

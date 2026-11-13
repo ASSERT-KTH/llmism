@@ -11,6 +11,7 @@ __all__ = [
     "split_sentences",
     "split_paragraphs",
     "bold_lead_in_bullets",
+    "bold_sentence_bullets",
 ]
 
 _LATEX_ENV = re.compile(
@@ -27,6 +28,11 @@ _MD_HEADING = re.compile(r"^#{1,6}\s.*$", re.MULTILINE)
 
 # A bullet line whose first rendered token is a **bold** lead-in.
 _BULLET_BOLD_LEAD = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+\*\*[^*\n]+\*\*")
+# A bullet whose bold lead-in is a whole sentence: "- **No prioritisation.**".
+_BULLET_BOLD_SENTENCE = re.compile(
+    r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+(\*\*[^*\n]*[^*\s\d][.!?]\*\*|\*\*[^*\n]*[^*\s]\*\*[.!?])",
+    re.MULTILINE,
+)
 
 # Sentence boundary: ., ! or ? followed by whitespace, next char not whitespace.
 # "3.5" has no space after the dot, so decimals never split.
@@ -200,3 +206,15 @@ def bold_lead_in_bullets(text: str, fmt: str = "markdown") -> list[Span]:
             run = []
     flush()
     return spans
+
+
+def bold_sentence_bullets(text: str, fmt: str = "markdown") -> list[Span]:
+    """Bold lead-ins of bullets that are full sentences (``- **No X.**``)."""
+    if fmt != "markdown":
+        return []
+    ranges = scannable_ranges(text, fmt)
+    return [
+        Span(m.start(1), m.end(1))
+        for m in _BULLET_BOLD_SENTENCE.finditer(text)
+        if any(r.start <= m.start(1) and m.end(1) <= r.end for r in ranges)
+    ]

@@ -112,7 +112,7 @@ conforming server works (vLLM, llama.cpp, Ollama, OpenRouter, ...).
 |---|---|
 | lexical | `genuine`, `merely`, `leverage`, `underscores`, `elevate`, `robust`, `load-bearing`, `boundaries`, `honestly`, `sufficient`, `terminate`, `approximately` |
 | phrasal | "it's not X, it's Y", `rather than`, `in addition`, `-ing` tail clauses, colon reveals ("here's the thing"), depth-signalling ("at a more fundamental level"), announcing labels ("the key insight is"), engagement bait ("let me know if") |
-| structural | colon-hinged sentences, ≥3 bullets with `**bold**` lead-ins, verbless fragments used as sentences, headers written as sentences, em-dash overuse (per paragraph), sentence-opener repetition, hedge stacking, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition |
+| structural | colon-hinged sentences, ≥3 bullets with `**bold**` lead-ins, any bullet whose bold lead-in is a whole sentence (`- **No prioritisation.**`), emoji in prose, verbless fragments used as sentences, headers written as sentences, em-dash overuse (per paragraph), sentence-opener repetition, hedge stacking, uniform sentence rhythm (low burstiness), uniform paragraph sizes, mechanical short/long cadence, synonym cycling, degenerate repetition |
 
 Further rules flag chatbot openings, vague attributions, generic conclusions,
 inflated significance, unfilled placeholders, leaked citation markup, AI-tool URL
@@ -124,6 +124,8 @@ The rule set is pruned to what actually fires: every rule here hit at least 10
 times over ~15k assistant turns (1.7M words) of Claude Code sessions. Rules that
 never paid for their scan time (`delve`, `tapestry`, `furthermore`, `utilize`,
 self-answered rhetorical questions, transition clusters, ...) live in git history.
+`bold-sentence-bullet` and `emoji` were added later by hand and have not been
+measured against that corpus.
 
 Pattern data lives in `llmism/data/patterns.yaml` — extend the list without
 touching code. Code fences (Markdown) and math environments, verbatim blocks and

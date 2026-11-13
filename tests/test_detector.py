@@ -397,3 +397,60 @@ class TestAvoidAiWritingPatterns:
     def test_five_hashtags_and_headings_are_allowed(self, detector: Detector) -> None:
         text = "# A heading with six ordinary words here\n#One #Two #Three #Four #Five\n"
         assert "hashtag-stuffing" not in [f.rule_id for f in detector.scan(text)]
+
+
+class TestBoldSentenceBullet:
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "1. **No prioritisation.**\n",
+            "- **No prioritisation.**\n",
+            "* **No prioritisation.** The backlog is flat.\n",
+            "2) **Why bother?** Because.\n",
+            "- **No prioritisation**. The backlog is flat.\n",
+        ],
+    )
+    def test_single_bold_sentence_item_flagged(self, detector: Detector, text: str) -> None:
+        (finding,) = [
+            f for f in detector.scan(text, "markdown") if f.rule_id == "bold-sentence-bullet"
+        ]
+        assert "No prioritisation" in finding.matched_text or "Why" in finding.matched_text
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "- **Performance:** fast.\n",
+            "- plain item, with **bold.** inside\n",
+            "**No prioritisation.** not a list item\n",
+            "- **v1.2** release\n",
+            "```\n- **No prioritisation.**\n```\n",
+        ],
+    )
+    def test_not_flagged(self, detector: Detector, text: str) -> None:
+        assert "bold-sentence-bullet" not in [f.rule_id for f in detector.scan(text, "markdown")]
+
+    def test_latex_ignored(self, detector: Detector) -> None:
+        text = "- **No prioritisation.**\n"
+        assert "bold-sentence-bullet" not in [f.rule_id for f in detector.scan(text, "latex")]
+
+
+class TestEmoji:
+    def test_each_emoji_run_flagged(self, detector: Detector) -> None:
+        text = "Done ✅ and shipped 🚀🎉. Next 👍🏽 step.\n"
+        found = [f.matched_text for f in detector.scan(text, "text") if f.rule_id == "emoji"]
+        assert found == ["✅", "🚀🎉", "👍🏽"]
+
+    def test_zwj_and_variation_selector_kept_in_one_run(self, detector: Detector) -> None:
+        text = "Team 👩‍💻 and ❤️ here.\n"
+        found = [f.matched_text for f in detector.scan(text, "text") if f.rule_id == "emoji"]
+        assert found == ["👩‍💻", "❤️"]
+
+    @pytest.mark.parametrize(
+        "text",
+        ["Copyright © 2026 ACME™ ® — x → y, 3 × 4 ≥ 2, café.\n", "Use `✅` in code.\n"],
+    )
+    def test_not_emoji(self, detector: Detector, text: str) -> None:
+        assert "emoji" not in [f.rule_id for f in detector.scan(text, "markdown")]
+
+    def test_code_fence_ignored(self, detector: Detector) -> None:
+        assert detector.scan("```\necho 🚀\n```\n", "markdown") == []
