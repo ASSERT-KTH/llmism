@@ -135,4 +135,4 @@ class TestFixDirectory:
     def test_single_file_still_works(self, docs: Path, capsys: pytest.CaptureFixture[str]) -> None:
         rc = main(["fix", str(docs / "index.md"), "--in-place"])
         assert "We use the data." in (docs / "index.md").read_text(encoding="utf-8")
-        assert rc == 1  # the input contained a problem, even though it was fixed
+        assert rc == 0

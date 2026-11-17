@@ -203,21 +203,52 @@ class TestFix:
         assert rc == 1
 
     @pytest.mark.parametrize("output_args", [[], ["--human"], ["--diff"], ["--in-place"]])
-    def test_fix_returns_one_when_it_detected_and_fixed_a_problem(
+    def test_successful_fix_returns_zero(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], output_args: list[str]
     ) -> None:
         path = tmp_path / "fixed.md"
         path.write_text("We leverage the data.\n", encoding="utf-8")
         rc = main(["fix", str(path), *output_args])
-        assert rc == 1
+        assert rc == 0
         if "--in-place" in output_args:
             assert "We use the data." in path.read_text(encoding="utf-8")
+
+    def test_successful_human_fix_only_reports_success(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        path = tmp_path / "fixed.md"
+        path.write_text("We leverage the data.\n", encoding="utf-8")
+        rc = main(["fix", str(path), "--human"])
+        captured = capsys.readouterr()
+        assert rc == 0
+        assert captured.out == "llmism fixed\nWe use the data.\n"
+        assert "error:" not in captured.out
+        assert captured.err == ""
 
     def test_clean_fix_exits_zero(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         p = tmp_path / "ok.md"
         p.write_text("Two bugs found. Both fixed.", encoding="utf-8")
         rc = main(["fix", str(p)])
         assert rc == 0
+
+    def test_in_place_partial_fix_does_not_repeat_resolved_errors(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["fix", str(sample_md), "--human", "--in-place"])
+        out = capsys.readouterr().out
+        assert rc == 1
+        assert out.startswith("llmism fixed\n")
+        assert f"{sample_md}:3: error:" not in out
+        assert f"{sample_md}:5: error:" in out
+
+    def test_clean_human_fix_is_silent(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        p = tmp_path / "ok.md"
+        p.write_text("Two bugs were found. Both fixed.\n", encoding="utf-8")
+        rc = main(["fix", str(p), "--human", "--in-place"])
+        assert rc == 0
+        assert capsys.readouterr().out == ""
 
     def test_diff_prints_unified_diff(
         self, sample_md: Path, capsys: pytest.CaptureFixture[str]
@@ -266,7 +297,7 @@ class TestFix:
         out = capsys.readouterr().out
         assert "--- a/-" in out
         assert "+We use the data." in out
-        assert rc == 1  # a detected problem gates the exit code after fixing too
+        assert rc == 0  # successful fixes are not errors
 
     def test_llm_flag_without_key_reports_error(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch

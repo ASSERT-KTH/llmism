@@ -222,8 +222,7 @@ def _fix_file_payload(
         "remaining": _findings_payload(result.remaining, text, target),
         "errors": result.errors,
     }
-    # Like a compiler (or diff), report detected input problems even when fixed.
-    return payload, (1 if findings or result.errors else 0)
+    return payload, (1 if result.remaining or result.errors else 0)
 
 
 def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> int:
@@ -242,10 +241,16 @@ def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> in
             if not diff.endswith("\n"):
                 sys.stdout.write("\n")
     else:
-        auto = len(result.fixed) + len(result.llm_fixed)
-        print(f"{target}: {auto} fixed, {len(result.remaining)} need manual attention")
-        for f in findings:
-            print(_diagnostic(f, text, target))
+        if not findings:
+            pass
+        elif not result.remaining:
+            print("llmism fixed")
+        else:
+            if args.in_place:
+                print("llmism fixed")
+            print(f"{target}: {len(result.remaining)} need manual attention")
+            for f in result.remaining:
+                print(_diagnostic(f, text, target))
         if result.remaining:
             print("  (rerun with --llm to rewrite these automatically)")
         if not args.in_place:
@@ -254,7 +259,7 @@ def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> in
                 sys.stdout.write("\n")
     if args.in_place and target != "-":
         Path(target).write_text(result.text, encoding="utf-8")
-    return 1 if findings or result.errors else 0
+    return 1 if result.remaining or result.errors else 0
 
 
 def main(argv: list[str] | None = None) -> int:

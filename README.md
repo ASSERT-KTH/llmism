@@ -33,8 +33,10 @@ llmism detect docs/ --human      # diagnostics per file + a summary line
 llmism detect . --format markdown   # restrict the walk to .md/.markdown
 ```
 
-Both commands exit 1 when they detect any finding, even if `fix` repairs
-it, and exit 0 only for clean input. Usage and configuration errors exit 2.
+`detect` exits 1 on any finding and 0 on clean input. `fix` exits 0 when
+successful and 1 when findings remain or remediation fails. Usage and
+configuration errors exit 2. A successful human-readable fix prints `llmism
+fixed` without repeating resolved diagnostics. Clean no-op runs are silent.
 
 JSON output is a flat findings list where every entry carries its own
 `path` and one-indexed `line`; `fix --diff` concatenates one unified diff
