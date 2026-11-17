@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,7 +25,9 @@ def sample_md(tmp_path: Path) -> Path:
 
 
 class TestDetect:
-    def test_human_table_output(self, sample_md: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_human_diagnostic_output(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         rc = main(["detect", str(sample_md), "--human"])
         out = capsys.readouterr().out
         assert "leverage" in out and "its-not-x-its-y" in out
@@ -87,6 +91,42 @@ class TestDetect:
         assert payload == []
         assert rc == 0
 
+    def test_json_findings_include_one_indexed_lines(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["detect", str(sample_md)])
+        payload = json.loads(capsys.readouterr().out)
+        lines = {f["rule"]: f["line"] for f in payload}
+        assert lines["leverage-verb"] == 3
+        assert lines["its-not-x-its-y"] == 5
+        assert rc == 1
+
+    def test_human_diagnostics_include_path_and_line(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["detect", str(sample_md), "--human"])
+        out = capsys.readouterr().out
+        assert f"{sample_md}:3: error:" in out
+        assert f"{sample_md}:5: error:" in out
+        assert rc == 1
+
+    @pytest.mark.parametrize(
+        ("content", "expected_rc"),
+        [("We leverage the data.\n", 1), ("Two bugs were fixed.\n", 0)],
+    )
+    def test_console_process_exit_status(
+        self, tmp_path: Path, content: str, expected_rc: int
+    ) -> None:
+        path = tmp_path / "process.md"
+        path.write_text(content, encoding="utf-8")
+        completed = subprocess.run(
+            [sys.executable, "-m", "llmism.cli", "detect", str(path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == expected_rc, completed.stderr
+
     def test_format_override_for_stdin(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -143,6 +183,36 @@ class TestFix:
         assert "We use the data" in content
         assert "print('leverage')" in content  # code fence untouched
 
+    def test_json_fixed_and_remaining_include_original_lines(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["fix", str(sample_md)])
+        payload = json.loads(capsys.readouterr().out)[0]
+        assert all(f["line"] == 3 for f in payload["fixed"])
+        remaining = {f["rule"]: f["line"] for f in payload["remaining"]}
+        assert remaining["its-not-x-its-y"] == 5
+        assert rc == 1
+
+    def test_human_remaining_diagnostics_include_path_and_line(
+        self, sample_md: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = main(["fix", str(sample_md), "--human"])
+        out = capsys.readouterr().out
+        assert f"{sample_md}:5: error:" in out
+        assert "its-not-x-its-y" in out
+        assert rc == 1
+
+    @pytest.mark.parametrize("output_args", [[], ["--human"], ["--diff"], ["--in-place"]])
+    def test_fix_returns_one_when_it_detected_and_fixed_a_problem(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], output_args: list[str]
+    ) -> None:
+        path = tmp_path / "fixed.md"
+        path.write_text("We leverage the data.\n", encoding="utf-8")
+        rc = main(["fix", str(path), *output_args])
+        assert rc == 1
+        if "--in-place" in output_args:
+            assert "We use the data." in path.read_text(encoding="utf-8")
+
     def test_clean_fix_exits_zero(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         p = tmp_path / "ok.md"
         p.write_text("Two bugs found. Both fixed.", encoding="utf-8")
@@ -196,7 +266,7 @@ class TestFix:
         out = capsys.readouterr().out
         assert "--- a/-" in out
         assert "+We use the data." in out
-        assert rc == 0
+        assert rc == 1  # a detected problem gates the exit code after fixing too
 
     def test_llm_flag_without_key_reports_error(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch

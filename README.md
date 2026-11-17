@@ -18,7 +18,7 @@ ln -s "$PWD/.venv/bin/llmism" ~/.local/bin/llmism   # optional: on PATH everywhe
 llmism detect README.md          # JSON findings on stdout, exit 1 if any
 llmism detect doc.tex            # .tex → LaTeX, .md → Markdown, else text
 llmism detect - --format markdown < draft.txt
-llmism detect post.md --human    # console table for humans
+llmism detect post.md --human    # compiler-style path:line diagnostics
 ```
 
 ### Directory input
@@ -29,12 +29,16 @@ llmism detect post.md --human    # console table for humans
 
 ```sh
 llmism detect docs/              # JSON array across all files, exit 1 if any
-llmism detect docs/ --human      # one table per file + a summary line
+llmism detect docs/ --human      # diagnostics per file + a summary line
 llmism detect . --format markdown   # restrict the walk to .md/.markdown
 ```
 
+Both commands exit 1 when they detect any finding, even if `fix` repairs
+it, and exit 0 only for clean input. Usage and configuration errors exit 2.
+
 JSON output is a flat findings list where every entry carries its own
-`path`; `fix --diff` concatenates one unified diff per changed file, so
+`path` and one-indexed `line`; `fix --diff` concatenates one unified diff
+per changed file, so
 `llmism fix docs/ --diff | git apply -` works on the whole tree.
 
 ### Per-rule configuration
@@ -67,11 +71,8 @@ for deterministic fixes, and
 for structural findings that need a model rewrite.
 
 ```
-LINE  CATEGORY   RULE                     MATCH
------  ---------  -----------------------  ------------------------------------
-3      lexical    delve                    'delve'
-3      lexical    leverage-verb            'leverage'
-5      phrasal    its-not-x-its-y          "It's not a bug, it's "
+post.md:3: error: [lexical/leverage-verb] Overused word: consider 'use'
+post.md:5: error: [phrasal/its-not-x-its-y] Overused phrase: LLM-sounding pattern, rewrite manually
 ```
 
 ## Fix
@@ -97,7 +98,8 @@ trees alike.
   text (`Done ✅ and` → `Done and`, `- 🚀 Deploy` → `- Deploy`).
 - **Other structural findings** (em-dash density, bold-lead-in bullets, colon-hinged
   sentences, low burstiness) have no safe deterministic rewrite. They are
-  reported as `remaining` unless you pass `--llm`:
+  reported as `remaining` unless you pass `--llm`. All findings, including
+  `fixed` and `llm_fixed`, carry their line in the original input.
 
 ```sh
 .venv/bin/pip install -e ".[llm]"   # optional inference extra

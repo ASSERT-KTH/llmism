@@ -7,7 +7,6 @@ import difflib
 import json
 import shlex
 import sys
-from collections.abc import Sequence
 from pathlib import Path
 
 from ._config import Config, ConfigError, load_config
@@ -95,10 +94,11 @@ def _fix_payload(f: Finding, path: str) -> dict[str, str]:
     }
 
 
-def _findings_payload(findings: list[Finding], path: str) -> list[dict[str, object]]:
+def _findings_payload(findings: list[Finding], text: str, path: str) -> list[dict[str, object]]:
     return [
         {
             "path": path,
+            "line": _line_of(text, f.start),
             "category": f.category,
             "rule": f.rule_id,
             "start": f.start,
@@ -116,29 +116,14 @@ def _line_of(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
-def _render_table(rows: Sequence[tuple[str, ...]], widths: tuple[int, ...]) -> str:
-    def fmt(row: tuple[str, ...]) -> str:
-        cells = [
-            c[: w - 1] + "…" if len(c) > w else c.ljust(w)
-            for c, w in zip(row, widths, strict=False)
-        ]
-        return "  ".join(cells).rstrip()
-
-    lines = [fmt(rows[0]), "  ".join("-" * w for w in widths).rstrip()]
-    lines += [fmt(r) for r in rows[1:]]
-    return "\n".join(lines)
+def _diagnostic(f: Finding, text: str, path: str) -> str:
+    # Compiler-style diagnostic with a one-indexed source line.
+    return f"{path}:{_line_of(text, f.start)}: error: [{f.category}/{f.rule_id}] {f.message}"
 
 
 def _print_findings(findings: list[Finding], text: str, path: str) -> None:
-    if not findings:
-        print(f"{path}: no LLMisms detected")
-        return
-    rows = [("LINE", "CATEGORY", "RULE", "MATCH")]
-    rows += [
-        (str(_line_of(text, f.start)), f.category, f.rule_id, repr(f.matched_text[:40]))
-        for f in findings
-    ]
-    print(_render_table(rows, (6, 10, 24, 42)))
+    for finding in findings:
+        print(_diagnostic(finding, text, path))
     print(f"\n{len(findings)} finding(s)")
 
 
@@ -162,8 +147,8 @@ def cmd_detect(args: argparse.Namespace) -> int:
 
     if args.json:
         payload: list[dict[str, object]] = []
-        for target, _, findings in all_findings:
-            payload.extend(_findings_payload(findings, target))
+        for target, text, findings in all_findings:
+            payload.extend(_findings_payload(findings, text, target))
         print(json.dumps(payload, indent=2))
     else:
         total = 0
@@ -232,12 +217,13 @@ def _fix_file_payload(
         "path": target,
         "text": result.text,
         "diff": _unified_diff(text, result.text, target),
-        "fixed": _findings_payload(result.fixed, target),
-        "llm_fixed": _findings_payload(result.llm_fixed, target),
-        "remaining": _findings_payload(result.remaining, target),
+        "fixed": _findings_payload(result.fixed, text, target),
+        "llm_fixed": _findings_payload(result.llm_fixed, text, target),
+        "remaining": _findings_payload(result.remaining, text, target),
         "errors": result.errors,
     }
-    return payload, (1 if result.remaining else 0)
+    # Like a compiler (or diff), report detected input problems even when fixed.
+    return payload, (1 if findings or result.errors else 0)
 
 
 def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> int:
@@ -258,8 +244,8 @@ def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> in
     else:
         auto = len(result.fixed) + len(result.llm_fixed)
         print(f"{target}: {auto} fixed, {len(result.remaining)} need manual attention")
-        for f in result.remaining:
-            print(f"  - [{f.rule_id}] {f.message}")
+        for f in findings:
+            print(_diagnostic(f, text, target))
         if result.remaining:
             print("  (rerun with --llm to rewrite these automatically)")
         if not args.in_place:
@@ -268,7 +254,7 @@ def _fix_stream(args: argparse.Namespace, target: str, detector: Detector) -> in
                 sys.stdout.write("\n")
     if args.in_place and target != "-":
         Path(target).write_text(result.text, encoding="utf-8")
-    return 1 if result.remaining else 0
+    return 1 if findings or result.errors else 0
 
 
 def main(argv: list[str] | None = None) -> int:
